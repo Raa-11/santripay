@@ -1,0 +1,42 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\LENOVO\\\\Programming\\\\Github\\\\santripay-newgen\\\\src\\\\routes\" -Recurse -Filter \"*auth*\" -ErrorAction SilentlyContinue)",
+      "Bash(Select-Object -ExpandProperty FullName)",
+      "Bash(Remove-Item -Path \"C:\\\\Users\\\\LENOVO\\\\Programming\\\\Github\\\\santripay-newgen\\\\src\\\\routes\\\\api\\\\auth\\\\[...auth]\\\\+server.ts\" -Force)",
+      "Bash(Remove-Item -Path \"C:\\\\Users\\\\LENOVO\\\\Programming\\\\Github\\\\santripay-newgen\\\\src\\\\routes\\\\api\\\\auth\\\\[...auth]\" -Force)",
+      "Bash(Remove-Item -Path \"C:\\\\Users\\\\LENOVO\\\\Programming\\\\Github\\\\santripay-newgen\\\\src\\\\routes\\\\api\\\\auth\" -Force)",
+      "Bash(Remove-Item -Path \"C:\\\\Users\\\\LENOVO\\\\Programming\\\\Github\\\\santripay-newgen\\\\src\\\\routes\\\\api\" -Force)",
+      "Bash(Get-ChildItem -Path \"C:\\\\Users\\\\LENOVO\\\\Programming\\\\Github\\\\santripay-newgen\" -Recurse -Directory)",
+      "Bash(Sort-Object)",
+      "Bash(find /mnt/c/Users/LENOVO/Programming/Github/santripay-newgen -not -path \"*/node_modules/*\" -type f | head -100)",
+      "Bash(mkdir -p './src/routes/\\(app\\)/master-data/students/[id]')",
+      "Bash(mkdir -p './src/routes/\\(app\\)/master-data/program-types')",
+      "Bash(mkdir -p './src/routes/\\(app\\)/master-data/savings-programs')",
+      "Bash(mkdir -p './src/routes/\\(app\\)/transactions/deposits')",
+      "Bash(mkdir -p './src/routes/\\(app\\)/transactions/withdrawals')",
+      "Bash(cp './src/routes/\\(app\\)/santri/+page.svelte' './src/routes/\\(app\\)/master-data/students/+page.svelte')",
+      "Bash(cp './src/routes/\\(app\\)/santri/+page.server.ts' './src/routes/\\(app\\)/master-data/students/+page.server.ts')",
+      "Bash(cp './src/routes/\\(app\\)/santri/[id]/+page.svelte' './src/routes/\\(app\\)/master-data/students/[id]/+page.svelte')",
+      "Bash(cp './src/routes/\\(app\\)/santri/[id]/+page.server.ts' './src/routes/\\(app\\)/master-data/students/[id]/+page.server.ts')",
+      "Bash(cp './src/routes/\\(app\\)/program/jenis/+page.svelte' './src/routes/\\(app\\)/master-data/program-types/+page.svelte')",
+      "Bash(cp './src/routes/\\(app\\)/program/progress/+page.svelte' './src/routes/\\(app\\)/student-savings/progress-by-program/+page.svelte')",
+      "Bash(cp './src/routes/\\(app\\)/program/progress/+page.server.ts' './src/routes/\\(app\\)/student-savings/progress-by-program/+page.server.ts')",
+      "Bash(cp './src/routes/\\(app\\)/program/pendaftaran/+page.svelte' './src/routes/\\(app\\)/student-savings/program-enrollment/+page.svelte')",
+      "Bash(cp './src/routes/\\(app\\)/program/pendaftaran/+page.server.ts' './src/routes/\\(app\\)/student-savings/program-enrollment/+page.server.ts')",
+      "Bash(cp './src/routes/\\(app\\)/laporan/harian/+page.svelte' './src/routes/\\(app\\)/reports/daily-report/+page.svelte')",
+      "Bash(rm -rf './src/routes/\\(app\\)/santri')",
+      "Bash(rm -rf './src/routes/\\(app\\)/program')",
+      "Bash(rm -rf './src/routes/\\(app\\)/transaksi')",
+      "Bash(rm -rf './src/routes/\\(app\\)/laporan')",
+      "Bash(rm -rf './src/routes/\\(app\\)/kas')",
+      "WebFetch(domain:www.diceui.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(cd /tmp)",
+      "Bash(pnpm dlx *)",
+      "Bash(gh api *)",
+      "Bash(node -e \"const icons = require\\('./node_modules/@hugeicons/core-free-icons'\\); console.log\\(Object.keys\\(icons\\).slice\\(0,5\\)\\)\")"
+    ]
+  }
+}
