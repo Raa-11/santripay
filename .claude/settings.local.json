@@ -36,7 +36,8 @@
       "Bash(cd /tmp)",
       "Bash(pnpm dlx *)",
       "Bash(gh api *)",
-      "Bash(node -e \"const icons = require\\('./node_modules/@hugeicons/core-free-icons'\\); console.log\\(Object.keys\\(icons\\).slice\\(0,5\\)\\)\")"
+      "Bash(node -e \"const icons = require\\('./node_modules/@hugeicons/core-free-icons'\\); console.log\\(Object.keys\\(icons\\).slice\\(0,5\\)\\)\")",
+      "WebFetch(domain:claude.ai)"
     ]
   }
 }
