@@ -1,9 +1,11 @@
-import type { PageServerLoad } from './$types';
+import type { RequestHandler } from './$types';
+import { json } from '@sveltejs/kit';
 import { db } from '$lib/server/db';
 import { savingPlans, studentSavings, ledgerEntries, students } from '$lib/server/db/schema';
 import { eq, and, sql, gte, lt, desc, isNull } from 'drizzle-orm';
 
-export const load: PageServerLoad = async ({ locals }) => {
+export const GET: RequestHandler = async ({ locals }) => {
+	if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
 	const now = new Date();
 	const utcY = now.getUTCFullYear();
@@ -24,16 +26,14 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const yearStart = new Date(Date.UTC(utcY, 0, 1));
 	const yearEnd   = new Date(Date.UTC(utcY + 1, 0, 1));
 
-	// 5 queries instead of 9 — merged same-table aggregates
 	const [
-		[savingsStatsRow],   // (1) studentSavings: balance + student counts
-		[ledgerStatsRow],    // (2) ledgerEntries: all aggregates in one pass
-		weeklyRaw,           // (3) weekly chart
-		yearlyRaw,           // (4) yearly chart
-		recentTx,            // (5) recent transactions with joins
-		programRows,         // (6) active programs — no join to ledger so kept separate
+		[savingsStatsRow],
+		[ledgerStatsRow],
+		weeklyRaw,
+		yearlyRaw,
+		recentTx,
+		programRows,
 	] = await Promise.all([
-		// (1) totalBalance + active/total student counts
 		db
 			.select({
 				totalBalance:  sql<string>`COALESCE(SUM(${studentSavings.currentAmount}::numeric), 0)`,
@@ -43,7 +43,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.from(studentSavings)
 			.where(isNull(studentSavings.deletedAt)),
 
-		// (2) all ledger aggregates in a single full-table pass (isReversed=false)
 		db
 			.select({
 				grossDeposits:    sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT'  THEN ${ledgerEntries.amount}::numeric END), 0)`,
@@ -58,7 +57,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.from(ledgerEntries)
 			.where(eq(ledgerEntries.isReversed, false)),
 
-		// (3) weekly chart
 		db
 			.select({
 				day:   sql<string>`TO_CHAR(DATE_TRUNC('day', ${ledgerEntries.createdAt}), 'YYYY-MM-DD')`,
@@ -70,7 +68,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.groupBy(sql`DATE_TRUNC('day', ${ledgerEntries.createdAt})`, ledgerEntries.type)
 			.orderBy(sql`DATE_TRUNC('day', ${ledgerEntries.createdAt})`),
 
-		// (4) yearly chart
 		db
 			.select({
 				month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${ledgerEntries.createdAt}), 'YYYY-MM')`,
@@ -82,7 +79,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.groupBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`, ledgerEntries.type)
 			.orderBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`),
 
-		// (5) recent transactions
 		db
 			.select({
 				id:          ledgerEntries.id,
@@ -101,7 +97,6 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.orderBy(desc(ledgerEntries.createdAt))
 			.limit(8),
 
-		// (6) active programs
 		db
 			.select({
 				id:                   savingPlans.id,
@@ -159,8 +154,7 @@ export const load: PageServerLoad = async ({ locals }) => {
 		};
 	});
 
-	return {
-		user:               locals.user,
+	return json({
 		totalBalance:       Number(savingsStatsRow?.totalBalance ?? 0),
 		totalDeposits:      Number(ledgerStatsRow?.grossDeposits ?? 0),
 		totalWithdrawals:   Number(ledgerStatsRow?.grossWithdrawals ?? 0),
@@ -185,5 +179,5 @@ export const load: PageServerLoad = async ({ locals }) => {
 			studentCount:        Number(p.studentCount),
 			totalCollected:      Number(p.totalCollected),
 		})),
-	};
+	});
 };
