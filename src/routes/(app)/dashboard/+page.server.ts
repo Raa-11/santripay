@@ -6,7 +6,6 @@ import { eq, and, sql, gte, lt, desc, isNull } from 'drizzle-orm';
 export const load: PageServerLoad = async ({ locals }) => {
 
 	const now = new Date();
-	// Use UTC throughout so Date.UTC keys match PostgreSQL DATE_TRUNC output
 	const utcY = now.getUTCFullYear();
 	const utcM = now.getUTCMonth();
 	const utcD = now.getUTCDate();
@@ -16,91 +15,54 @@ export const load: PageServerLoad = async ({ locals }) => {
 	const yesterday     = new Date(Date.UTC(utcY, utcM, utcD - 1));
 	const monthStart    = new Date(Date.UTC(utcY, utcM, 1));
 
-	// Current week Mon–Sun
-	const dow = now.getUTCDay(); // 0=Sun … 6=Sat
-	const daysFromMon = dow === 0 ? 6 : dow - 1;
-	const weekStart     = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon));     // this Monday
-	const weekEnd       = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon + 7)); // next Monday
-	const prevWeekStart = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon - 7)); // prev Monday
+	const dow           = now.getUTCDay();
+	const daysFromMon   = dow === 0 ? 6 : dow - 1;
+	const weekStart     = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon));
+	const weekEnd       = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon + 7));
+	const prevWeekStart = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon - 7));
 
-	// Current year
 	const yearStart = new Date(Date.UTC(utcY, 0, 1));
 	const yearEnd   = new Date(Date.UTC(utcY + 1, 0, 1));
 
+	// 5 queries instead of 9 — merged same-table aggregates
 	const [
-		[totalBalanceRow],
-		grossStats,
-		[todayYesterdayRow],
-		[studentStatsRow],
-		[periodStatsRow],
-		weeklyRaw,
-		yearlyRaw,
-		recentTx,
-		programRows,
+		[savingsStatsRow],   // (1) studentSavings: balance + student counts
+		[ledgerStatsRow],    // (2) ledgerEntries: all aggregates in one pass
+		weeklyRaw,           // (3) weekly chart
+		yearlyRaw,           // (4) yearly chart
+		recentTx,            // (5) recent transactions with joins
+		programRows,         // (6) active programs — no join to ledger so kept separate
 	] = await Promise.all([
-		// Total current savings balance (1)
-		db
-			.select({ total: sql<string>`COALESCE(SUM(${studentSavings.currentAmount}::numeric), 0)` })
-			.from(studentSavings)
-			.where(isNull(studentSavings.deletedAt)),
-
-		// All-time gross deposits & withdrawals (2)
+		// (1) totalBalance + active/total student counts
 		db
 			.select({
-				type: ledgerEntries.type,
-				total: sql<string>`COALESCE(SUM(${ledgerEntries.amount}::numeric), 0)`
-			})
-			.from(ledgerEntries)
-			.where(eq(ledgerEntries.isReversed, false))
-			.groupBy(ledgerEntries.type),
-
-		// Today & Yesterday's deposits (3)
-		db
-			.select({
-				todayTotal: sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.createdAt} >= ${todayStart} AND ${ledgerEntries.createdAt} < ${tomorrowStart} THEN ${ledgerEntries.amount}::numeric END), 0)`,
-				todayCount: sql<string>`COUNT(CASE WHEN ${ledgerEntries.createdAt} >= ${todayStart} AND ${ledgerEntries.createdAt} < ${tomorrowStart} THEN 1 END)`,
-				yesterdayTotal: sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.createdAt} >= ${yesterday} AND ${ledgerEntries.createdAt} < ${todayStart} THEN ${ledgerEntries.amount}::numeric END), 0)`
-			})
-			.from(ledgerEntries)
-			.where(
-				and(
-					eq(ledgerEntries.type, 'DEPOSIT'),
-					eq(ledgerEntries.isReversed, false),
-					gte(ledgerEntries.createdAt, yesterday),
-					lt(ledgerEntries.createdAt, tomorrowStart)
-				)
-			),
-
-		// Active & Total students (4)
-		db
-			.select({
-				activeCount: sql<string>`COUNT(DISTINCT CASE WHEN ${studentSavings.status} = 'ACTIVE' THEN ${studentSavings.studentId} END)`,
-				totalCount: sql<string>`COUNT(DISTINCT ${studentSavings.studentId})`
+				totalBalance:  sql<string>`COALESCE(SUM(${studentSavings.currentAmount}::numeric), 0)`,
+				activeCount:   sql<string>`COUNT(DISTINCT CASE WHEN ${studentSavings.status} = 'ACTIVE' THEN ${studentSavings.studentId} END)`,
+				totalCount:    sql<string>`COUNT(DISTINCT ${studentSavings.studentId})`,
 			})
 			.from(studentSavings)
 			.where(isNull(studentSavings.deletedAt)),
 
-		// Period stats: This week, Prev week, and This month's deposits (5)
+		// (2) all ledger aggregates in a single full-table pass (isReversed=false)
 		db
 			.select({
-				thisWeekTotal: sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.createdAt} >= ${weekStart} AND ${ledgerEntries.createdAt} < ${weekEnd} THEN ${ledgerEntries.amount}::numeric END), 0)`,
-				prevWeekTotal: sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.createdAt} >= ${prevWeekStart} AND ${ledgerEntries.createdAt} < ${weekStart} THEN ${ledgerEntries.amount}::numeric END), 0)`,
-				thisMonthTotal: sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.createdAt} >= ${monthStart} THEN ${ledgerEntries.amount}::numeric END), 0)`
+				grossDeposits:    sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT'  THEN ${ledgerEntries.amount}::numeric END), 0)`,
+				grossWithdrawals: sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'WITHDRAW' THEN ${ledgerEntries.amount}::numeric END), 0)`,
+				todayTotal:       sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.createdAt} >= ${todayStart}    AND ${ledgerEntries.createdAt} < ${tomorrowStart} THEN ${ledgerEntries.amount}::numeric END), 0)`,
+				todayCount:       sql<string>`COUNT(       CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.createdAt} >= ${todayStart}    AND ${ledgerEntries.createdAt} < ${tomorrowStart} THEN 1 END)`,
+				yesterdayTotal:   sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.createdAt} >= ${yesterday}     AND ${ledgerEntries.createdAt} < ${todayStart}    THEN ${ledgerEntries.amount}::numeric END), 0)`,
+				thisWeekTotal:    sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.createdAt} >= ${weekStart}     AND ${ledgerEntries.createdAt} < ${weekEnd}       THEN ${ledgerEntries.amount}::numeric END), 0)`,
+				prevWeekTotal:    sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.createdAt} >= ${prevWeekStart} AND ${ledgerEntries.createdAt} < ${weekStart}     THEN ${ledgerEntries.amount}::numeric END), 0)`,
+				thisMonthTotal:   sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.createdAt} >= ${monthStart}    THEN ${ledgerEntries.amount}::numeric END), 0)`,
 			})
 			.from(ledgerEntries)
-			.where(
-				and(
-					eq(ledgerEntries.type, 'DEPOSIT'),
-					eq(ledgerEntries.isReversed, false),
-					gte(ledgerEntries.createdAt, prevWeekStart < monthStart ? prevWeekStart : monthStart)
-				)
-			),
+			.where(eq(ledgerEntries.isReversed, false)),
 
-		// Weekly chart: Mon–Sun, deposit + withdraw per day (6)
+		// (3) weekly chart
 		db
 			.select({
-				day: sql<string>`TO_CHAR(DATE_TRUNC('day', ${ledgerEntries.createdAt}), 'YYYY-MM-DD')`,
-				type: ledgerEntries.type,
+				day:   sql<string>`TO_CHAR(DATE_TRUNC('day', ${ledgerEntries.createdAt}), 'YYYY-MM-DD')`,
+				type:  ledgerEntries.type,
 				total: sql<string>`COALESCE(SUM(${ledgerEntries.amount}::numeric), 0)`,
 			})
 			.from(ledgerEntries)
@@ -108,11 +70,11 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.groupBy(sql`DATE_TRUNC('day', ${ledgerEntries.createdAt})`, ledgerEntries.type)
 			.orderBy(sql`DATE_TRUNC('day', ${ledgerEntries.createdAt})`),
 
-		// Yearly chart: Jan–Dec, deposit + withdraw per month (7)
+		// (4) yearly chart
 		db
 			.select({
 				month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${ledgerEntries.createdAt}), 'YYYY-MM')`,
-				type: ledgerEntries.type,
+				type:  ledgerEntries.type,
 				total: sql<string>`COALESCE(SUM(${ledgerEntries.amount}::numeric), 0)`,
 			})
 			.from(ledgerEntries)
@@ -120,17 +82,17 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.groupBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`, ledgerEntries.type)
 			.orderBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`),
 
-		// Recent transactions with student and plan info (8)
+		// (5) recent transactions
 		db
 			.select({
-				id: ledgerEntries.id,
-				type: ledgerEntries.type,
-				amount: ledgerEntries.amount,
-				isReversed: ledgerEntries.isReversed,
+				id:          ledgerEntries.id,
+				type:        ledgerEntries.type,
+				amount:      ledgerEntries.amount,
+				isReversed:  ledgerEntries.isReversed,
 				referenceNo: ledgerEntries.referenceNo,
-				createdAt: ledgerEntries.createdAt,
+				createdAt:   ledgerEntries.createdAt,
 				studentName: students.name,
-				planName: savingPlans.name,
+				planName:    savingPlans.name,
 			})
 			.from(ledgerEntries)
 			.innerJoin(studentSavings, eq(ledgerEntries.studentSavingsId, studentSavings.id))
@@ -139,16 +101,16 @@ export const load: PageServerLoad = async ({ locals }) => {
 			.orderBy(desc(ledgerEntries.createdAt))
 			.limit(8),
 
-		// Active programs with student count and collected balance (9)
+		// (6) active programs
 		db
 			.select({
-				id: savingPlans.id,
-				name: savingPlans.name,
-				code: savingPlans.code,
-				savingType: savingPlans.savingType,
-				defaultTargetAmount: savingPlans.defaultTargetAmount,
-				studentCount: sql<string>`COUNT(DISTINCT ${studentSavings.id})`,
-				totalCollected: sql<string>`COALESCE(SUM(${studentSavings.currentAmount}::numeric), 0)`,
+				id:                   savingPlans.id,
+				name:                 savingPlans.name,
+				code:                 savingPlans.code,
+				savingType:           savingPlans.savingType,
+				defaultTargetAmount:  savingPlans.defaultTargetAmount,
+				studentCount:         sql<string>`COUNT(DISTINCT ${studentSavings.id})`,
+				totalCollected:       sql<string>`COALESCE(SUM(${studentSavings.currentAmount}::numeric), 0)`,
 			})
 			.from(savingPlans)
 			.leftJoin(
@@ -172,9 +134,9 @@ export const load: PageServerLoad = async ({ locals }) => {
 		const d = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon + i));
 		const key = d.toISOString().slice(0, 10);
 		return {
-			day: key,
-			label: d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
-			deposit: weeklyDepMap.get(key) ?? 0,
+			day:      key,
+			label:    d.toLocaleDateString('en-US', { weekday: 'short', timeZone: 'UTC' }),
+			deposit:  weeklyDepMap.get(key) ?? 0,
 			withdraw: weeklyWthMap.get(key) ?? 0,
 		};
 	});
@@ -187,41 +149,41 @@ export const load: PageServerLoad = async ({ locals }) => {
 	}
 
 	const monthlyData = Array.from({ length: 12 }, (_, i) => {
-		const d = new Date(Date.UTC(utcY, i, 1));
 		const key = `${utcY}-${String(i + 1).padStart(2, '0')}`;
+		const d   = new Date(Date.UTC(utcY, i, 1));
 		return {
-			month: key,
-			label: d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
-			deposit: yearlyDepMap.get(key) ?? 0,
+			month:    key,
+			label:    d.toLocaleDateString('en-US', { month: 'short', timeZone: 'UTC' }),
+			deposit:  yearlyDepMap.get(key) ?? 0,
 			withdraw: yearlyWthMap.get(key) ?? 0,
 		};
 	});
 
 	return {
-		user: locals.user,
-		totalBalance: Number(totalBalanceRow?.total ?? 0),
-		totalDeposits: Number(grossStats.find((r) => r.type === 'DEPOSIT')?.total ?? 0),
-		totalWithdrawals: Number(grossStats.find((r) => r.type === 'WITHDRAW')?.total ?? 0),
-		todayDeposits: Number(todayYesterdayRow?.todayTotal ?? 0),
-		todayCount: Number(todayYesterdayRow?.todayCount ?? 0),
-		yesterdayDeposits: Number(todayYesterdayRow?.yesterdayTotal ?? 0),
-		activeStudents: Number(studentStatsRow?.activeCount ?? 0),
-		totalStudents: Number(studentStatsRow?.totalCount ?? 0),
-		thisWeekDeposits: Number(periodStatsRow?.thisWeekTotal ?? 0),
-		prevWeekDeposits: Number(periodStatsRow?.prevWeekTotal ?? 0),
-		thisMonthDeposits: Number(periodStatsRow?.thisMonthTotal ?? 0),
+		user:               locals.user,
+		totalBalance:       Number(savingsStatsRow?.totalBalance ?? 0),
+		totalDeposits:      Number(ledgerStatsRow?.grossDeposits ?? 0),
+		totalWithdrawals:   Number(ledgerStatsRow?.grossWithdrawals ?? 0),
+		todayDeposits:      Number(ledgerStatsRow?.todayTotal ?? 0),
+		todayCount:         Number(ledgerStatsRow?.todayCount ?? 0),
+		yesterdayDeposits:  Number(ledgerStatsRow?.yesterdayTotal ?? 0),
+		activeStudents:     Number(savingsStatsRow?.activeCount ?? 0),
+		totalStudents:      Number(savingsStatsRow?.totalCount ?? 0),
+		thisWeekDeposits:   Number(ledgerStatsRow?.thisWeekTotal ?? 0),
+		prevWeekDeposits:   Number(ledgerStatsRow?.prevWeekTotal ?? 0),
+		thisMonthDeposits:  Number(ledgerStatsRow?.thisMonthTotal ?? 0),
 		dailyData,
 		monthlyData,
 		recentTx: recentTx.map((tx) => ({
 			...tx,
-			amount: Number(tx.amount),
+			amount:    Number(tx.amount),
 			createdAt: tx.createdAt.toISOString(),
 		})),
 		programs: programRows.map((p) => ({
 			...p,
 			defaultTargetAmount: p.defaultTargetAmount ? Number(p.defaultTargetAmount) : null,
-			studentCount: Number(p.studentCount),
-			totalCollected: Number(p.totalCollected),
+			studentCount:        Number(p.studentCount),
+			totalCollected:      Number(p.totalCollected),
 		})),
 	};
 };
