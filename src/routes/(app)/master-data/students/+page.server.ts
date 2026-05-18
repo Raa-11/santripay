@@ -26,10 +26,8 @@ const deleteAdapter = effect(DeleteSchema);
 const BulkStatusSchema = Schema.Struct({ ids: Schema.Array(Schema.String), isActive: Schema.Boolean });
 const bulkStatusAdapter = effect(BulkStatusSchema);
 
-export const load: PageServerLoad = ({ url, request }) => {
+export const load: PageServerLoad = ({ url, locals }) => {
 	return Effect.runPromise(Effect.gen(function* () {
-		const session = yield* Effect.promise(() => auth.api.getSession({ headers: request.headers }));
-		
 		const [items, addForm, editForm, deleteForm, bulkStatusForm] = yield* Effect.all([
 			Effect.promise(() => db.select().from(students).orderBy(desc(students.createdAt))),
 			Effect.promise(() => superValidate({ isActive: true }, studentAdapter, { id: 'add' })),
@@ -38,7 +36,7 @@ export const load: PageServerLoad = ({ url, request }) => {
 			Effect.promise(() => superValidate(bulkStatusAdapter, { id: 'bulkStatus' }))
 		]);
 
-		return { items, addForm, editForm, deleteForm, bulkStatusForm, currentUserId: session?.user.id };
+		return { items, addForm, editForm, deleteForm, bulkStatusForm, currentUserId: locals.user?.id };
 	}));
 };
 

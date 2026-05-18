@@ -1,7 +1,6 @@
 import type { PageServerLoad } from './$types';
 import { db } from '$lib/server/db';
 import { savingPlans, studentSavings, ledgerEntries } from '$lib/server/db/schema';
-import { auth } from '$lib/server/auth';
 import { eq, and, sql, gte, lt, inArray } from 'drizzle-orm';
 
 function monthsBetween(from: Date, to: Date): number {
@@ -49,8 +48,8 @@ function getGrouping(months: number): 'month' | 'quarter' | 'year' {
 	return 'year';
 }
 
-export const load: PageServerLoad = async ({ url, request }) => {
-	const session = await auth.api.getSession({ headers: request.headers });
+export const load: PageServerLoad = async ({ url, locals }) => {
+	const user = locals.user;
 
 	const plans = await db
 		.select({
@@ -69,7 +68,7 @@ export const load: PageServerLoad = async ({ url, request }) => {
 	const planId = url.searchParams.get('planId') ?? plans[0]?.id ?? null;
 	const plan = plans.find((p) => p.id === planId) ?? null;
 
-	if (!plan) return { plans, report: null, user: session?.user ?? null };
+	if (!plan) return { plans, report: null, user: user ?? null };
 
 	// Date range (chart filter)
 	const now = new Date();
@@ -118,75 +117,41 @@ export const load: PageServerLoad = async ({ url, request }) => {
 				rangeFrom: rangeFrom.toISOString().slice(0, 10),
 				rangeTo: rangeTo.toISOString().slice(0, 10),
 			},
-			user: session?.user ?? null,
+			user: user ?? null,
 		};
 	}
 
-	// Total collected (DEPOSIT - WITHDRAW, non-reversed) — cumulative, no range filter
-	const [totalRow] = await db
-		.select({
-			total: sql<string>`COALESCE(SUM(CASE WHEN type = 'DEPOSIT' THEN amount::numeric ELSE -amount::numeric END), 0)`,
-		})
-		.from(ledgerEntries)
-		.where(and(inArray(ledgerEntries.studentSavingsId, ssIds), eq(ledgerEntries.isReversed, false)));
+	// All ledger stats in one pass + chart query — run in parallel (2 queries instead of 6 sequential)
+	const [[statsRow], chartRaw] = await Promise.all([
+		db
+			.select({
+				totalCollected:    sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.isReversed} = false THEN ${ledgerEntries.amount}::numeric WHEN ${ledgerEntries.type} = 'WITHDRAW' AND ${ledgerEntries.isReversed} = false THEN -${ledgerEntries.amount}::numeric END), 0)`,
+				currentMonthTotal: sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.isReversed} = false AND ${ledgerEntries.createdAt} >= ${monthStart} THEN ${ledgerEntries.amount}::numeric END), 0)`,
+				prevMonthTotal:    sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.isReversed} = false AND ${ledgerEntries.createdAt} >= ${prevMonthStart} AND ${ledgerEntries.createdAt} < ${monthStart} THEN ${ledgerEntries.amount}::numeric END), 0)`,
+				reversalCount:     sql<string>`COUNT(CASE WHEN ${ledgerEntries.isReversed} = true THEN 1 END)`,
+				totalTransactions: sql<string>`COUNT(*)`,
+			})
+			.from(ledgerEntries)
+			.where(inArray(ledgerEntries.studentSavingsId, ssIds)),
 
-	// Current month deposits
-	const [curRow] = await db
-		.select({ total: sql<string>`COALESCE(SUM(amount::numeric), 0)` })
-		.from(ledgerEntries)
-		.where(
-			and(
-				inArray(ledgerEntries.studentSavingsId, ssIds),
-				eq(ledgerEntries.type, 'DEPOSIT'),
-				eq(ledgerEntries.isReversed, false),
-				gte(ledgerEntries.createdAt, monthStart),
-			),
-		);
-
-	// Previous month deposits
-	const [prevRow] = await db
-		.select({ total: sql<string>`COALESCE(SUM(amount::numeric), 0)` })
-		.from(ledgerEntries)
-		.where(
-			and(
-				inArray(ledgerEntries.studentSavingsId, ssIds),
-				eq(ledgerEntries.type, 'DEPOSIT'),
-				eq(ledgerEntries.isReversed, false),
-				gte(ledgerEntries.createdAt, prevMonthStart),
-				lt(ledgerEntries.createdAt, monthStart),
-			),
-		);
-
-	// Reversals count
-	const [revRow] = await db
-		.select({ cnt: sql<string>`COUNT(*)` })
-		.from(ledgerEntries)
-		.where(and(inArray(ledgerEntries.studentSavingsId, ssIds), eq(ledgerEntries.isReversed, true)));
-
-	// Total transactions
-	const [txRow] = await db
-		.select({ cnt: sql<string>`COUNT(*)` })
-		.from(ledgerEntries)
-		.where(inArray(ledgerEntries.studentSavingsId, ssIds));
-
-	// Always fetch monthly, then aggregate to quarters in JS if range > 12 months
-	const chartRaw = await db
-		.select({
-			month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${ledgerEntries.createdAt}), 'YYYY-MM')`,
-			total: sql<string>`COALESCE(SUM(${ledgerEntries.amount}::numeric), 0)`,
-		})
-		.from(ledgerEntries)
-		.where(
-			and(
-				inArray(ledgerEntries.studentSavingsId, ssIds),
-				eq(ledgerEntries.type, 'DEPOSIT'),
-				eq(ledgerEntries.isReversed, false),
-				gte(ledgerEntries.createdAt, rangeFrom),
-				lt(ledgerEntries.createdAt, rangeToExclusive),
-			),
-		)
-		.groupBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`)
-		.orderBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`);
+		db
+			.select({
+				month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${ledgerEntries.createdAt}), 'YYYY-MM')`,
+				total: sql<string>`COALESCE(SUM(${ledgerEntries.amount}::numeric), 0)`,
+			})
+			.from(ledgerEntries)
+			.where(
+				and(
+					inArray(ledgerEntries.studentSavingsId, ssIds),
+					eq(ledgerEntries.type, 'DEPOSIT'),
+					eq(ledgerEntries.isReversed, false),
+					gte(ledgerEntries.createdAt, rangeFrom),
+					lt(ledgerEntries.createdAt, rangeToExclusive),
+				),
+			)
+			.groupBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`)
+			.orderBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`),
+	]);
 
 	const chartMap = new Map(chartRaw.map((r) => [r.month, Number(r.total)]));
 	const monthlyFull = buildMonthArray(rangeFrom, rangeTo).map((m) => ({
@@ -201,11 +166,11 @@ export const load: PageServerLoad = async ({ url, request }) => {
 
 	const studentCount = enrolled.length;
 	const newStudentsThisMonth = enrolled.filter((s) => new Date(s.createdAt) >= monthStart).length;
-	const totalCollected = Number(totalRow?.total ?? 0);
-	const currentMonthTotal = Number(curRow?.total ?? 0);
-	const prevMonthTotal = Number(prevRow?.total ?? 0);
-	const reversalCount = Number(revRow?.cnt ?? 0);
-	const totalTransactions = Number(txRow?.cnt ?? 0);
+	const totalCollected = Number(statsRow?.totalCollected ?? 0);
+	const currentMonthTotal = Number(statsRow?.currentMonthTotal ?? 0);
+	const prevMonthTotal = Number(statsRow?.prevMonthTotal ?? 0);
+	const reversalCount = Number(statsRow?.reversalCount ?? 0);
+	const totalTransactions = Number(statsRow?.totalTransactions ?? 0);
 	const avgPerStudent = studentCount > 0 ? Math.round(totalCollected / studentCount) : 0;
 
 	return {
@@ -224,6 +189,6 @@ export const load: PageServerLoad = async ({ url, request }) => {
 			rangeFrom: rangeFrom.toISOString().slice(0, 10),
 			rangeTo: rangeTo.toISOString().slice(0, 10),
 		},
-		user: session?.user ?? null,
+		user: user ?? null,
 	};
 };

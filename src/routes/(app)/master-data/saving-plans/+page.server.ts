@@ -38,10 +38,8 @@ const bulkStatusAdapter = effect(BulkStatusSchema);
 const enrollAdapter = effect(EnrollStudentSchema);
 const removeAdapter = effect(RemoveStudentsSchema);
 
-export const load: PageServerLoad = ({ request }) => {
+export const load: PageServerLoad = ({ locals }) => {
 	return Effect.runPromise(Effect.gen(function* () {
-		const session = yield* Effect.promise(() => auth.api.getSession({ headers: request.headers }));
-
 		const [items, activeStudents, enrolledPairs, addForm, editForm, deleteForm, bulkStatusForm, enrollForm, removeForm] =
 			yield* Effect.all([
 				Effect.promise(() =>
@@ -93,7 +91,7 @@ export const load: PageServerLoad = ({ request }) => {
 		return {
 			items, activeStudents, enrolledPairs,
 			addForm, editForm, deleteForm, bulkStatusForm, enrollForm, removeForm,
-			currentUserId: session?.user.id,
+			currentUserId: locals.user?.id,
 		};
 	}));
 };

@@ -41,10 +41,8 @@ const deleteAdapter = effect(DeleteSchema);
 
 
 // ── 2. LOAD ──
-export const load: PageServerLoad = ({ url, request }) => {
+export const load: PageServerLoad = ({ locals }) => {
 	return Effect.runPromise(Effect.gen(function* () {
-		const session = yield* Effect.promise(() => auth.api.getSession({ headers: request.headers }));
-		
 		const [users, addForm, editForm, passwordForm, deleteForm] = yield* Effect.all([
 			Effect.promise(() => db.select({ id: user.id, name: user.name, email: user.email, emailVerified: user.emailVerified, createdAt: user.createdAt }).from(user).orderBy(desc(user.createdAt))),
 			Effect.promise(() => superValidate(userAdapter, { id: 'add' })),
@@ -53,7 +51,7 @@ export const load: PageServerLoad = ({ url, request }) => {
 			Effect.promise(() => superValidate(deleteAdapter, { id: 'delete' }))
 		]);
 
-		return { users, addForm, editForm, passwordForm, deleteForm, currentUserId: session?.user.id };
+		return { users, addForm, editForm, passwordForm, deleteForm, currentUserId: locals.user?.id };
 	}));
 };
 
