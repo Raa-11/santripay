@@ -3,7 +3,7 @@ import { db } from '$lib/server/db';
 import { students } from '$lib/server/db/schema';
 import { auth } from '$lib/server/auth';
 import { fail } from '@sveltejs/kit';
-import { ilike, or, desc, asc, count, sql, eq, inArray } from 'drizzle-orm';
+import { desc, eq, inArray } from 'drizzle-orm';
 import { Effect, Schema } from 'effect';
 import { superValidate, message } from 'sveltekit-superforms';
 import { effect } from 'sveltekit-superforms/adapters';
@@ -26,10 +26,10 @@ const deleteAdapter = effect(DeleteSchema);
 const BulkStatusSchema = Schema.Struct({ ids: Schema.Array(Schema.String), isActive: Schema.Boolean });
 const bulkStatusAdapter = effect(BulkStatusSchema);
 
-export const load: PageServerLoad = ({ url, locals }) => {
+export const load: PageServerLoad = ({ locals }) => {
 	return Effect.runPromise(Effect.gen(function* () {
 		const [items, addForm, editForm, deleteForm, bulkStatusForm] = yield* Effect.all([
-			Effect.promise(() => db.select().from(students).orderBy(desc(students.createdAt))),
+			Effect.promise(() => db.select().from(students).orderBy(desc(students.createdAt)).limit(1000)),
 			Effect.promise(() => superValidate({ isActive: true }, studentAdapter, { id: 'add' })),
 			Effect.promise(() => superValidate({ isActive: true }, studentAdapter, { id: 'edit' })),
 			Effect.promise(() => superValidate(deleteAdapter, { id: 'delete' })),

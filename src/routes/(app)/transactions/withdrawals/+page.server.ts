@@ -127,15 +127,16 @@ export const actions: Actions = {
 			})),
 		);
 
-		for (const d of distributions) {
-			await db
-				.update(studentSavings)
-				.set({
-					currentAmount: sql`${studentSavings.currentAmount}::numeric - ${d.share.toString()}`,
-					updatedBy: locals.user!.id,
-				})
-				.where(eq(studentSavings.id, d.id));
-		}
+		// Single batch UPDATE instead of N sequential round-trips to Neon
+		const valueChunks = distributions.map((d) => sql`(${d.id}::uuid, ${d.share.toString()}::numeric)`);
+		await db.execute(sql`
+			UPDATE student_savings ss
+			SET current_amount = ss.current_amount::numeric - updates.amount,
+			    updated_by = ${locals.user!.id},
+			    updated_at = now()
+			FROM (VALUES ${sql.join(valueChunks, sql`, `)}) AS updates(id, amount)
+			WHERE ss.id = updates.id
+		`);
 
 		return {
 			success: true,

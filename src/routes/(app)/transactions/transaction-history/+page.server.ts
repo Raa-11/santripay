@@ -35,7 +35,7 @@ export const load: PageServerLoad = ({ locals }) => {
 					.leftJoin(reversals, eq(reversals.transferId, ledgerEntries.id))
 					.where(isNull(ledgerEntries.deletedAt))
 					.orderBy(desc(ledgerEntries.createdAt))
-					.limit(500),
+					.limit(200),
 			);
 
 			return {
