@@ -76,7 +76,7 @@
         : 0,
   );
 
-  const monthlyChartConfig: ChartConfig = { total: { label: "Deposit" } };
+  const monthlyChartConfig: ChartConfig = { total: { label: "Setoran" } };
   let chartType = $state<"bar" | "line">("bar");
 
   // Date range picker state — initialized from server data
@@ -145,8 +145,8 @@
 
   const statusLabel = $derived(() => {
     if (!plan) return "";
-    if (plan.savingType === "FLEXIBLE") return "flexible";
-    return "goal";
+    if (plan.savingType === "FLEXIBLE") return "fleksibel";
+    return "target";
   });
   const statusColor = $derived(() => {
     if (!plan) return "text-muted-foreground";
@@ -171,22 +171,22 @@
 </script>
 
 <svelte:head>
-  <title>Saving Plans Report</title>
+  <title>Laporan Program Tabungan</title>
 </svelte:head>
 
 <div class="flex flex-1 flex-col gap-6 print-page">
   <!-- HEADER -->
   <div class="flex items-start justify-between no-print">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Saving Plans Report</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">Laporan Program Tabungan</h1>
       <p class="mt-1 text-sm text-muted-foreground">
-        In-depth analysis per savings program — goal progress, contributors, and
-        timeline.
+        Analisis mendalam per program tabungan — progres target, kontributor, dan
+        linimasa.
       </p>
     </div>
     <div class="flex gap-2">
       <Button size="sm" onclick={() => window.print()}>
-        <HugeiconsIcon icon={PrinterIcon} size={14} /> Print PDF
+        <HugeiconsIcon icon={PrinterIcon} size={14} /> Cetak PDF
       </Button>
     </div>
   </div>
@@ -216,7 +216,7 @@
               >
             {:else}
               <span class="flex-1 text-left text-muted-foreground"
-                >Select program…</span
+                >Pilih program…</span
               >
             {/if}
             <svg
@@ -358,7 +358,7 @@
               onclick={resetRange}
               class="text-xs text-muted-foreground"
             >
-              Reset to default
+              Kembalikan ke default
             </Button>
             <Button
               size="sm"
@@ -366,7 +366,7 @@
               onclick={applyRange}
               disabled={!dateRange.start || !dateRange.end}
             >
-              Apply
+              Terapkan
             </Button>
           </div>
         </Popover.Content>
@@ -374,7 +374,7 @@
     </Popover.Root>
 
     <span class="text-xs text-muted-foreground shrink-0">
-      {data.plans.length} programs available
+      {data.plans.length} program tersedia
     </span>
   </div>
 
@@ -382,7 +382,7 @@
     <div
       class="flex flex-1 items-center justify-center text-sm text-muted-foreground"
     >
-      No programs available.
+      Tidak ada program tersedia.
     </div>
   {:else}
     <Card.Root class="rounded-2xl overflow-hidden print-card">
@@ -399,8 +399,8 @@
               >{plan.name}</Card.Title
             >
             <Card.Description class="mt-1 text-xs">
-              {r.studentCount} students enrolled · {r.totalTransactions} transactions
-              · since {fmtDate(plan.startDate ?? plan.createdAt)}
+              {r.studentCount} siswa terdaftar · {r.totalTransactions} transaksi
+              · sejak {fmtDate(plan.startDate ?? plan.createdAt)}
             </Card.Description>
           </div>
           <span
@@ -421,28 +421,28 @@
                 <p
                   class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
                 >
-                  Total Collected
+                  Total Terkumpul
                 </p>
                 <p class="mt-1 text-3xl font-bold tracking-tight">
                   {fmtRp(r.totalCollected)}
                 </p>
                 <p class="mt-1 text-[11px] text-muted-foreground">
-                  Flexible — no fixed target
+                  Fleksibel — tanpa target tetap
                 </p>
                 <div class="mt-3 flex items-center gap-4 text-[11px]">
                   <span
-                    >Type: <strong class="text-amber-700">Flexible</strong
+                    >Jenis: <strong class="text-amber-700">Fleksibel</strong
                     ></span
                   >
                   <span class="text-muted-foreground">·</span>
                   <span
-                    >New students this month: <strong
+                    >Siswa baru bulan ini: <strong
                       >+{r.newStudentsThisMonth}</strong
                     ></span
                   >
                   <span class="text-muted-foreground">·</span>
                   <span
-                    >This month: <strong>{fmtRp(r.currentMonthTotal)}</strong
+                    >Bulan ini: <strong>{fmtRp(r.currentMonthTotal)}</strong
                     ></span
                   >
                 </div>
@@ -452,7 +452,7 @@
                   <p
                     class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground"
                   >
-                    Students
+                    Siswa
                   </p>
                   <p class="mt-1 text-2xl font-bold">{r.studentCount}</p>
                 </div>
@@ -460,7 +460,7 @@
                   <p
                     class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground"
                   >
-                    Avg / Student
+                    Rata-rata / Siswa
                   </p>
                   <p class="mt-1 text-2xl font-bold">
                     {fmtRp(r.avgPerStudent)}
@@ -478,7 +478,7 @@
                 <p
                   class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground"
                 >
-                  Collected
+                  Terkumpul
                 </p>
                 <p class="mt-1 text-xl font-bold">{fmtRp(r.totalCollected)}</p>
               </div>
@@ -491,7 +491,7 @@
                 <p
                   class="mt-1 text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
                 >
-                  of Target
+                  dari Target
                 </p>
               </div>
               <div class="text-right">
@@ -516,16 +516,16 @@
 
             <div class="mt-3 flex items-center justify-between text-[11px]">
               <span
-                >Remaining: <strong class="text-destructive"
+                >Tersisa: <strong class="text-destructive"
                   >{fmtRp(remaining)}</strong
                 ></span
               >
               <span
-                >Monthly avg: <strong>{fmtRp(Math.round(avgMonthly))}</strong
+                >Rata-rata bulanan: <strong>{fmtRp(Math.round(avgMonthly))}</strong
                 ></span
               >
               <span
-                >Est. completion: <strong>{estimatedDate() ?? "—"}</strong
+                >Perkiraan selesai: <strong>{estimatedDate() ?? "—"}</strong
                 ></span
               >
             </div>
@@ -539,7 +539,7 @@
               <p
                 class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground"
               >
-                This Month
+                Bulan Ini
               </p>
               <p class="mt-2 text-lg font-bold text-emerald-700">
                 + {fmtRp(r.currentMonthTotal)}
@@ -574,11 +574,11 @@
               <p
                 class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground"
               >
-                Total Students
+                Total Siswa
               </p>
               <p class="mt-2 text-lg font-bold">{r.studentCount}</p>
               <p class="mt-1 text-[10px] text-muted-foreground">
-                ▲ {r.newStudentsThisMonth} new this month
+                ▲ {r.newStudentsThisMonth} baru bulan ini
               </p>
             </Card.Content>
           </Card.Root>
@@ -588,10 +588,10 @@
               <p
                 class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground"
               >
-                Avg per Student
+                Rata-rata per Siswa
               </p>
               <p class="mt-2 text-lg font-bold">{fmtRp(r.avgPerStudent)}</p>
-              <p class="mt-1 text-[10px] text-muted-foreground">accumulated</p>
+              <p class="mt-1 text-[10px] text-muted-foreground">terakumulasi</p>
             </Card.Content>
           </Card.Root>
 
@@ -600,7 +600,7 @@
               <p
                 class="text-[9px] font-bold uppercase tracking-widest text-muted-foreground"
               >
-                Reversals
+                Pembatalan
               </p>
               <p
                 class="mt-2 text-lg font-bold {r.reversalCount > 0
@@ -612,7 +612,7 @@
               <p class="mt-1 text-[10px] text-muted-foreground">
                 {r.totalTransactions > 0
                   ? `< ${Math.max(Math.ceil((r.reversalCount / r.totalTransactions) * 100), r.reversalCount > 0 ? 1 : 0)}% of total`
-                  : "no transactions"}
+                  : "tidak ada transaksi"}
               </p>
             </Card.Content>
           </Card.Root>
@@ -632,7 +632,7 @@
                   ? 'bg-background shadow-sm text-foreground'
                   : 'text-muted-foreground hover:text-foreground'}"
               >
-                Bar
+                Batang
               </button>
               <button
                 onclick={() => (chartType = "line")}
@@ -641,7 +641,7 @@
                   ? 'bg-background shadow-sm text-foreground'
                   : 'text-muted-foreground hover:text-foreground'}"
               >
-                Line
+                Garis
               </button>
             </div>
             <p class="text-[10px] text-muted-foreground">{chartRangeLabel()}</p>
@@ -669,7 +669,7 @@
                 series={[
                   {
                     key: "total",
-                    label: "Deposit",
+                    label: "Setoran",
                     color: "var(--primary)",
                   },
                 ]}
@@ -685,7 +685,7 @@
                   <ChartTooltip>
                     {#snippet formatter({ value })}
                       <div class="flex items-center justify-between gap-6 w-full leading-none">
-                        <span class="text-muted-foreground">Deposit</span>
+                        <span class="text-muted-foreground">Setoran</span>
                         <span class="text-foreground font-mono font-bold">{fmtRp(Number(value))}</span>
                       </div>
                     {/snippet}
@@ -700,7 +700,7 @@
                 series={[
                   {
                     key: "total",
-                    label: "Deposit",
+                    label: "Setoran",
                     color: "var(--primary)",
                   },
                 ]}
@@ -721,7 +721,7 @@
                   <ChartTooltip>
                     {#snippet formatter({ value })}
                       <div class="flex items-center justify-between gap-6 w-full leading-none">
-                        <span class="text-muted-foreground">Deposit</span>
+                        <span class="text-muted-foreground">Setoran</span>
                         <span class="text-foreground font-mono font-bold">{fmtRp(Number(value))}</span>
                       </div>
                     {/snippet}
@@ -736,26 +736,26 @@
         <div class="mt-8 border-t pt-6">
           <div class="grid grid-cols-2 gap-8">
             <div class="text-center">
-              <p class="text-xs text-muted-foreground mb-20">Prepared by,</p>
+              <p class="text-xs text-muted-foreground mb-20">Disiapkan oleh,</p>
               <div class="border-t border-foreground/30 pt-2 mx-6">
                 <p class="text-xs font-semibold">{data.user?.name ?? "—"}</p>
                 <p class="text-[10px] text-muted-foreground">
-                  Treasurer · {data.user?.email ?? ""}
+                  Bendahara · {data.user?.email ?? ""}
                 </p>
               </div>
             </div>
             <div class="text-center">
-              <p class="text-xs text-muted-foreground mb-20">Approved by,</p>
+              <p class="text-xs text-muted-foreground mb-20">Disetujui oleh,</p>
               <div class="border-t border-foreground/30 pt-2 mx-6">
                 <p class="text-xs font-semibold">&nbsp;</p>
                 <p class="text-[10px] text-muted-foreground">
-                  Head of Institution
+                  Kepala Lembaga
                 </p>
               </div>
             </div>
           </div>
           <p class="mt-6 text-center text-[9px] text-muted-foreground">
-            Generated by SantriPay · {plan.code} · {printDate}
+            Dibuat oleh SantriPay · {plan.code} · {printDate}
           </p>
         </div>
       </Card.Content>

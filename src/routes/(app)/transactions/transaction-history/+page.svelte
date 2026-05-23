@@ -27,31 +27,34 @@
   import * as RangeCalendar from '$lib/components/ui/range-calendar/index.js';
   import { CalendarDate, type DateValue, today, getLocalTimeZone } from '@internationalized/date';
 
+  // Ambil data dari server (daftar transaksi + data user)
   let { data }: { data: PageData } = $props();
 
-  // ── Types ──
+  // Tipe jenis transaksi tampilan: deposit, withdrawal, atau reversal (pembatalan)
   type UiType = 'deposit' | 'withdrawal' | 'reversal';
+  // Tipe struktur satu baris transaksi di tabel riwayat
   interface TxRow {
-    referenceNo: string;
-    entryId: string;
-    createdAt: string;
-    uiType: UiType;
-    dbType: string;
-    studentName: string;
-    studentNis: string;
-    studentClass: string | null;
-    planName: string;
-    planCode: string;
-    amount: number;
-    isReversed: boolean;
-    operatorName: string | null;
-    description: string | null;
-    reversalReason: string | null;
+    referenceNo: string;          // Nomor referensi transaksi
+    entryId: string;              // ID entri di ledger
+    createdAt: string;            // Waktu transaksi
+    uiType: UiType;               // Jenis tampilan di UI
+    dbType: string;               // Jenis di database (DEPOSIT/WITHDRAW)
+    studentName: string;          // Nama santri
+    studentNis: string;           // NIS santri
+    studentClass: string | null;  // Kelas santri
+    planName: string;             // Nama program tabungan
+    planCode: string;             // Kode program tabungan
+    amount: number;               // Nominal
+    isReversed: boolean;          // Apakah sudah dibatalkan
+    operatorName: string | null;  // Nama admin yang input
+    description: string | null;   // Keterangan
+    reversalReason: string | null; // Alasan pembatalan
   }
 
-  // ── Helpers ──
+  // Format angka ke Rupiah
   const fmt = (n: number) => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(n));
 
+  // Format waktu transaksi: hari ini tampil jam, hari lain tampil tanggal + jam
   function txDateTime(iso: string): string {
     const d = new Date(iso);
     const todayDate = new Date();
@@ -67,7 +70,7 @@
 
   const now = new Date();
 
-  // ── Map server rows → TxRow ──
+  // Mapping data dari server: tentukan uiType (deposit/withdrawal/reversal) untuk tiap entri
   const allTx = $derived(data.transactions.map((r) => ({
     referenceNo: r.referenceNo,
     entryId: r.entryId,
@@ -86,31 +89,33 @@
     reversalReason: r.reversalReason,
   })));
 
-  // ── Filter state ──
+  // State pagination, sorting, filter kolom tabel
   let pagination     = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  let sorting        = $state<SortingState>([{ id: 'createdAt', desc: true }]);
+  let sorting        = $state<SortingState>([{ id: 'createdAt', desc: true }]); // Default: terbaru dulu
   let columnFilters  = $state<ColumnFiltersState>([]);
   let columnVisibility = $state<VisibilityState>({});
-  let globalFilter   = $state('');
-  let selectedTypes  = $state<UiType | 'all'>('all');
-  let selectedPlan   = $state<string | null>(null);
+  let globalFilter   = $state('');              // Teks pencarian bebas
+  let selectedTypes  = $state<UiType | 'all'>('all');    // Filter jenis transaksi
+  let selectedPlan   = $state<string | null>(null);      // Filter per program tabungan
 
+  // Pilihan jenis transaksi untuk dropdown filter
   const typeOptions: { key: UiType | 'all'; label: string; dot: string }[] = [
-    { key: 'all',        label: 'All Types',  dot: 'bg-muted-foreground' },
-    { key: 'deposit',    label: 'Deposit',    dot: 'bg-primary' },
-    { key: 'withdrawal', label: 'Withdrawal', dot: 'bg-destructive' },
-    { key: 'reversal',   label: 'Reversal',   dot: 'bg-amber-500' },
+    { key: 'all',        label: 'Semua Jenis',  dot: 'bg-muted-foreground' },
+    { key: 'deposit',    label: 'Setoran',      dot: 'bg-primary' },
+    { key: 'withdrawal', label: 'Penarikan',    dot: 'bg-destructive' },
+    { key: 'reversal',   label: 'Pembatalan',   dot: 'bg-amber-500' },
   ];
 
+  // Label aktif di tombol dropdown jenis transaksi
   const activeTypeLabel = $derived(
-    selectedTypes === 'all' ? 'Types' : (typeOptions.find((o) => o.key === selectedTypes)?.label ?? 'Types')
+    selectedTypes === 'all' ? 'Jenis' : (typeOptions.find((o) => o.key === selectedTypes)?.label ?? 'Jenis')
   );
 
-  // ── Date range calendar filter ──
+  // State filter kalender tanggal (rentang awal - akhir)
   type DateRange = { start: DateValue | undefined; end: DateValue | undefined };
-  const todayDv = today(getLocalTimeZone());
-  let filterRange = $state<DateRange>({ start: todayDv, end: todayDv });
-  let calendarOpen = $state(false);
+  const todayDv = today(getLocalTimeZone()); // Tanggal hari ini
+  let filterRange = $state<DateRange>({ start: todayDv, end: todayDv }); // Default: hari ini
+  let calendarOpen = $state(false); // State buka/tutup popup kalender
 
   function fmtDv(dv: DateValue): string {
     return new Date(dv.year, dv.month - 1, dv.day).toLocaleDateString('en-GB', {
@@ -124,8 +129,8 @@
         ? fmtDv(filterRange.start)
         : `${fmtDv(filterRange.start)} – ${fmtDv(filterRange.end)}`
       : filterRange.start
-      ? `From ${fmtDv(filterRange.start)}`
-      : 'All dates'
+      ? `Dari ${fmtDv(filterRange.start)}`
+      : 'Semua tanggal'
   );
 
   const rangeStart = $derived(
@@ -139,7 +144,7 @@
       : null
   );
 
-  // ── Stats: date-filtered only (no type filter) ──
+  // Statistik ringkasan dalam rentang tanggal yang dipilih (tidak terpengaruh filter jenis)
   const dateTx = $derived(
     allTx.filter((tx) => {
       const d = new Date(tx.createdAt);
@@ -151,18 +156,19 @@
 
   const rangeLabel = $derived(dateRangeLabel);
 
+  // Total nominal masing-masing jenis transaksi di rentang terpilih
   const totalDeposit    = $derived(dateTx.filter((t) => t.uiType === 'deposit').reduce((s, t) => s + t.amount, 0));
   const totalWithdrawal = $derived(dateTx.filter((t) => t.uiType === 'withdrawal').reduce((s, t) => s + t.amount, 0));
   const totalReversal   = $derived(dateTx.filter((t) => t.uiType === 'reversal').reduce((s, t) => s + t.amount, 0));
-  const netFlow         = $derived(totalDeposit - totalWithdrawal);
+  const netFlow         = $derived(totalDeposit - totalWithdrawal); // Arus bersih: setoran dikurangi penarikan
 
-  // ── Available saving plans (from loaded data) ──
+  // Ambil daftar program tabungan unik dari data untuk dropdown filter program
   const availablePlans = $derived(
     [...new Map(allTx.map((tx) => [tx.planCode, { code: tx.planCode, name: tx.planName }])).values()]
       .sort((a, b) => a.name.localeCompare(b.name))
   );
 
-  // ── Table data: date + type + plan + text filters ──
+  // Data akhir tabel setelah semua filter diterapkan (tanggal + jenis + program + teks)
   const filteredData = $derived(
     dateTx.filter((tx) => {
       if (selectedTypes !== 'all' && tx.uiType !== selectedTypes) return false;
@@ -179,26 +185,26 @@
     })
   );
 
-  // ── Column defs ──
+  // Definisi kolom-kolom tabel riwayat transaksi
   const columns: ColumnDef<TxRow>[] = [
     {
       accessorKey: 'referenceNo',
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Ref No' }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'No. Ref' }),
       cell: ({ row }) => renderSnippet(refCell, { id: row.original.referenceNo }),
     },
     {
       accessorKey: 'createdAt',
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Time' }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Waktu' }),
       cell: ({ row }) => renderSnippet(timeCell, { iso: row.original.createdAt }),
     },
     {
       accessorKey: 'uiType',
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Type' }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Jenis' }),
       cell: ({ row }) => renderSnippet(typeCell, { type: row.original.uiType }),
     },
     {
       accessorKey: 'studentName',
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Student' }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Siswa' }),
       cell: ({ row }) => renderSnippet(studentCell, { tx: row.original }),
     },
     {
@@ -208,7 +214,7 @@
     },
     {
       accessorKey: 'amount',
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Amount' }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: 'Jumlah' }),
       cell: ({ row }) => renderSnippet(amountCell, { tx: row.original }),
     },
     {
@@ -218,7 +224,7 @@
     },
     {
       id: 'reversal',
-      header: 'Reversal',
+      header: 'Pembatalan',
       cell: ({ row }) => renderSnippet(reversalCell, { tx: row.original }),
       enableSorting: false,
     },
@@ -244,7 +250,7 @@
 </script>
 
 <svelte:head>
-  <title>Transaction History</title>
+  <title>Riwayat Transaksi</title>
 </svelte:head>
 
 <!-- ══ PAGE ══ -->
@@ -253,9 +259,9 @@
   <!-- Header -->
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Transaction History</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">Riwayat Transaksi</h1>
       <p class="text-sm text-muted-foreground mt-1">
-        Full journal of all deposits, withdrawals, and reversals. Filter by period, student, or program.
+        Jurnal lengkap semua setoran, penarikan, dan pembatalan. Filter berdasarkan periode, siswa, atau program.
       </p>
     </div>
   </div>
@@ -263,26 +269,26 @@
   <!-- Stat cards -->
   <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
     <div class="rounded-xl border bg-card px-4 py-3.5 space-y-1">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Deposits</p>
+      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Total Setoran</p>
       <p class="text-xl font-bold text-primary">+ {fmt(totalDeposit)}</p>
-      <p class="text-[11px] text-muted-foreground">{dateTx.filter((t) => t.uiType === 'deposit').length} transactions</p>
+      <p class="text-[11px] text-muted-foreground">{dateTx.filter((t) => t.uiType === 'deposit').length} transaksi</p>
     </div>
     <div class="rounded-xl border bg-card px-4 py-3.5 space-y-1">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Withdrawals</p>
+      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Penarikan</p>
       <p class="text-xl font-bold text-destructive">− {fmt(totalWithdrawal)}</p>
-      <p class="text-[11px] text-muted-foreground">{dateTx.filter((t) => t.uiType === 'withdrawal').length} transactions</p>
+      <p class="text-[11px] text-muted-foreground">{dateTx.filter((t) => t.uiType === 'withdrawal').length} transaksi</p>
     </div>
     <div class="rounded-xl border bg-card px-4 py-3.5 space-y-1">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Reversals</p>
+      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pembatalan</p>
       <p class="text-xl font-bold text-amber-600">↺ {fmt(totalReversal)}</p>
-      <p class="text-[11px] text-muted-foreground">{dateTx.filter((t) => t.uiType === 'reversal').length} transactions</p>
+      <p class="text-[11px] text-muted-foreground">{dateTx.filter((t) => t.uiType === 'reversal').length} transaksi</p>
     </div>
     <div class="rounded-xl border bg-card px-4 py-3.5 space-y-1">
-      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Net Flow</p>
+      <p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Arus Bersih</p>
       <p class="text-xl font-bold {netFlow >= 0 ? 'text-primary' : 'text-destructive'}">
         {netFlow >= 0 ? '+' : '−'} {fmt(Math.abs(netFlow))}
       </p>
-      <p class="text-[11px] text-muted-foreground">{dateTx.length} entries · {rangeLabel}</p>
+      <p class="text-[11px] text-muted-foreground">{dateTx.length} entri · {rangeLabel}</p>
     </div>
   </div>
 
@@ -295,7 +301,7 @@
         <Input
           bind:value={globalFilter}
           oninput={() => { pagination = { ...pagination, pageIndex: 0 }; }}
-          placeholder="Search ref no, student, program..."
+          placeholder="Cari no. ref, siswa, program..."
           class="h-8 pl-8 text-xs w-60 bg-card"
         />
       </div>
@@ -389,7 +395,7 @@
               {...props}
               class="inline-flex h-8 items-center gap-2 rounded-md border border-border bg-card px-3 text-xs font-semibold text-foreground transition-colors hover:bg-muted {selectedPlan ? 'border-primary/50 text-primary' : ''}"
             >
-              {selectedPlan ? availablePlans.find((p) => p.code === selectedPlan)?.name ?? selectedPlan : 'Saving Plan'}
+              {selectedPlan ? availablePlans.find((p) => p.code === selectedPlan)?.name ?? selectedPlan : 'Program Tabungan'}
               <svg class="size-3 text-muted-foreground" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
             </button>
           {/snippet}
@@ -399,7 +405,7 @@
             onclick={() => { selectedPlan = null; pagination = { ...pagination, pageIndex: 0 }; }}
             class="flex w-full items-center gap-2.5 rounded-lg px-2.5 py-2 text-xs font-medium transition-colors hover:bg-muted {selectedPlan === null ? 'bg-muted text-foreground' : 'text-muted-foreground'}"
           >
-            <span class="flex-1 text-left">All Plans</span>
+            <span class="flex-1 text-left">Semua Program</span>
             {#if selectedPlan === null}
               <svg class="size-3.5 text-primary shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
             {/if}
@@ -451,7 +457,7 @@
         {:else}
           <Table.Row>
             <Table.Cell colspan={columns.length} class="h-20 text-center text-xs text-muted-foreground">
-              No transactions found.
+              Tidak ada transaksi.
             </Table.Cell>
           </Table.Row>
         {/each}
@@ -461,10 +467,10 @@
 
   <!-- Pagination -->
   <div class="flex items-center justify-between text-xs text-muted-foreground">
-    <span>{filteredData.length} transactions · {rangeLabel}</span>
+    <span>{filteredData.length} transaksi · {rangeLabel}</span>
     <div class="flex items-center gap-4">
       <div class="flex items-center gap-2">
-        <span>Rows</span>
+        <span>Baris</span>
         <select
           class="rounded-md border px-2 py-1 bg-transparent font-medium text-xs focus:outline-none"
           value={table.getState().pagination.pageSize}
@@ -478,7 +484,7 @@
       <div class="flex items-center gap-1 font-bold text-foreground">
         <Button variant="outline" size="icon-sm" class="size-8" disabled={!table.getCanPreviousPage()} onclick={() => table.previousPage()}>‹</Button>
         <span class="px-3 py-1.5 bg-muted/50 rounded-md">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+          Halaman {table.getState().pagination.pageIndex + 1} dari {table.getPageCount() || 1}
         </span>
         <Button variant="outline" size="icon-sm" class="size-8" disabled={!table.getCanNextPage()} onclick={() => table.nextPage()}>›</Button>
       </div>
@@ -516,11 +522,11 @@
 
 {#snippet typeCell({ type }: { type: UiType })}
   {#if type === 'deposit'}
-    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">● deposit</span>
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary">● setoran</span>
   {:else if type === 'withdrawal'}
-    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive">● withdrawal</span>
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive">● penarikan</span>
   {:else}
-    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600">↺ reversal</span>
+    <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-600">↺ pembatalan</span>
   {/if}
 {/snippet}
 

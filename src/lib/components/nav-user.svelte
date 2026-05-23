@@ -64,7 +64,7 @@
 				<DropdownMenu.Item>
 					<form method="POST" action="/signout" use:enhance class="flex w-full items-center gap-2">
 						<LogOutIcon class="size-4" />
-						<button type="submit" class="flex-1 text-start">Sign Out</button>
+						<button type="submit" class="flex-1 text-start">Keluar</button>
 					</form>
 				</DropdownMenu.Item>
 			</DropdownMenu.Content>

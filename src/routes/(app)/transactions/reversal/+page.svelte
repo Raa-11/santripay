@@ -36,29 +36,32 @@
     getLocalTimeZone,
   } from "@internationalized/date";
 
+  // Ambil data transaksi dan form dari server
   let { data }: { data: PageData } = $props();
 
-  // ── Types ──
+  // Tipe jenis transaksi: hanya DEPOSIT atau WITHDRAW
   type TxType = "DEPOSIT" | "WITHDRAW";
+  // Tipe struktur data satu baris transaksi di tabel
   interface TxRow {
-    entryId: string;
-    referenceNo: string;
-    createdAt: string;
-    type: TxType;
-    amount: number;
-    description: string | null;
-    studentName: string;
-    studentNis: string;
-    studentClass: string | null;
-    planName: string;
-    planCode: string;
+    entryId: string;           // ID transaksi
+    referenceNo: string;       // Nomor referensi
+    createdAt: string;         // Waktu transaksi
+    type: TxType;              // Jenis: DEPOSIT / WITHDRAW
+    amount: number;            // Nominal uang
+    description: string | null; // Keterangan
+    studentName: string;       // Nama santri
+    studentNis: string;        // NIS santri
+    studentClass: string | null; // Kelas santri
+    planName: string;          // Nama program tabungan
+    planCode: string;          // Kode program tabungan
   }
 
-  // ── Helpers ──
+  // Format angka ke Rupiah (Contoh: Rp 75.000)
   const fmt = (n: number) =>
     "Rp " + new Intl.NumberFormat("id-ID").format(Math.round(n));
 
 
+  // Format waktu: hari ini → jam saja, hari lain → tanggal + jam
   function txDateTime(iso: string): string {
     const d = new Date(iso);
     const todayDate = new Date();
@@ -75,14 +78,14 @@
     );
   }
 
-  // ── Data from server ──
+  // Semua data transaksi dari server (dicast ke tipe TxRow[])
   const allTx = $derived(data.transactions as TxRow[]);
 
-  // ── Date range filter ──
+  // Tipe rentang tanggal filter (awal - akhir)
   type DateRange = { start: DateValue | undefined; end: DateValue | undefined };
-  const todayDv = today(getLocalTimeZone());
-  let filterRange = $state<DateRange>({ start: todayDv, end: todayDv });
-  let calendarOpen = $state(false);
+  const todayDv = today(getLocalTimeZone()); // Tanggal hari ini dalam format kalender
+  let filterRange = $state<DateRange>({ start: todayDv, end: todayDv }); // Default filter: hari ini
+  let calendarOpen = $state(false); // State buka/tutup popup kalender filter tanggal
 
   function fmtDv(dv: DateValue): string {
     return new Date(dv.year, dv.month - 1, dv.day).toLocaleDateString("en-GB", {
@@ -98,8 +101,8 @@
         ? fmtDv(filterRange.start)
         : `${fmtDv(filterRange.start)} – ${fmtDv(filterRange.end)}`
       : filterRange.start
-        ? `From ${fmtDv(filterRange.start)}`
-        : "All dates",
+        ? `Dari ${fmtDv(filterRange.start)}`
+        : "Semua tanggal",
   );
 
   const rangeStart = $derived(
@@ -121,37 +124,39 @@
       : null,
   );
 
-  // ── Filter state ──
+  // State pagination, sorting, dan filter kolom tabel
   let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
-  let sorting = $state<SortingState>([{ id: "createdAt", desc: true }]);
+  let sorting = $state<SortingState>([{ id: "createdAt", desc: true }]); // Default urutan: terbaru dulu
   let columnFilters = $state<ColumnFiltersState>([]);
   let columnVisibility = $state<VisibilityState>({});
-  let globalFilter = $state("");
-  let typeFilter = $state<"all" | "DEPOSIT" | "WITHDRAW">("all");
+  let globalFilter = $state("");                                           // Isi kotak pencarian teks bebas
+  let typeFilter = $state<"all" | "DEPOSIT" | "WITHDRAW">("all");          // Filter jenis transaksi
 
+  // Pilihan jenis transaksi untuk dropdown filter
   const typeOptions: {
     key: "all" | "DEPOSIT" | "WITHDRAW";
     label: string;
     dot: string;
   }[] = [
-    { key: "all", label: "All Types", dot: "bg-muted-foreground" },
-    { key: "DEPOSIT", label: "Deposit", dot: "bg-primary" },
-    { key: "WITHDRAW", label: "Withdrawal", dot: "bg-destructive" },
+    { key: "all", label: "Semua Jenis", dot: "bg-muted-foreground" },
+    { key: "DEPOSIT", label: "Setoran", dot: "bg-primary" },
+    { key: "WITHDRAW", label: "Penarikan", dot: "bg-destructive" },
   ];
 
   const activeTypeLabel = $derived(
     typeFilter === "all"
-      ? "Types"
-      : (typeOptions.find((o) => o.key === typeFilter)?.label ?? "Types"),
+      ? "Jenis"
+      : (typeOptions.find((o) => o.key === typeFilter)?.label ?? "Jenis"),
   );
 
+  // Filter transaksi berdasarkan rentang tanggal, jenis, dan teks pencarian secara reaktif
   const filteredData = $derived(
     allTx.filter((tx) => {
       const d = new Date(tx.createdAt);
-      if (rangeStart && d < rangeStart) return false;
-      if (rangeEnd && d >= rangeEnd) return false;
-      if (typeFilter !== "all" && tx.type !== typeFilter) return false;
-      if (!globalFilter) return true;
+      if (rangeStart && d < rangeStart) return false;           // Filter tanggal awal
+      if (rangeEnd && d >= rangeEnd) return false;              // Filter tanggal akhir
+      if (typeFilter !== "all" && tx.type !== typeFilter) return false; // Filter jenis transaksi
+      if (!globalFilter) return true;                           // Tanpa teks pencarian = tampilkan semua
       const q = globalFilter.toLowerCase();
       return (
         tx.referenceNo.toLowerCase().includes(q) ||
@@ -164,65 +169,67 @@
 
 
 
-  // ── Confirmation modal ──
+  // State untuk menyimpan transaksi yang sedang dikonfirmasi untuk dibatalkan
   let confirmTx = $state<TxRow | null>(null);
 
+  // Buka dialog konfirmasi pembatalan dan reset form alasan
   function openConfirm(tx: TxRow) {
     confirmTx = tx;
     reversalReset();
   }
 
+  // Tutup dialog konfirmasi dan bersihkan state
   function closeConfirm() {
     confirmTx = null;
     reversalReset();
   }
 
-  // ── Superform ──
+  // Form pembatalan transaksi menggunakan superforms
   const {
-    form: reversalForm,
-    enhance: reversalEnhance,
-    reset: reversalReset,
-    submitting: reversalSubmitting,
-    message: reversalMessage,
+    form: reversalForm,          // Isi field form (reason, entryId)
+    enhance: reversalEnhance,    // Progressive enhancement agar form pakai fetch bukan full reload
+    reset: reversalReset,        // Fungsi reset form ke kondisi awal
+    submitting: reversalSubmitting, // State loading saat form sedang diproses server
+    message: reversalMessage,    // Pesan balasan dari server (sukses/error)
   } = superForm<any>(() => data.reversalForm!, {
     onUpdated: ({ form }) => {
       if (form.valid) {
-        closeConfirm();
-        toast.success(form.message || "Transaction reversed successfully");
+        closeConfirm(); // Tutup dialog kalau pembatalan berhasil
+        toast.success(form.message || "Transaksi berhasil dibatalkan");
       } else if (form.message) {
-        toast.error(form.message);
+        toast.error(form.message); // Tampilkan pesan error dari server
       }
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Reversal failed"),
+      toast.error(result.error.message || "Pembatalan gagal"),
   });
 
-  // ── Table ──
+  // Definisi kolom tabel transaksi yang bisa dibatalkan
   const columns: ColumnDef<TxRow>[] = [
     {
       accessorKey: "referenceNo",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Ref No" }),
+        renderSnippet(sortHeader, { column, label: "No. Ref" }),
       cell: ({ row }) =>
         renderSnippet(refCell, { id: row.original.referenceNo }),
     },
     {
       accessorKey: "createdAt",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Time" }),
+        renderSnippet(sortHeader, { column, label: "Waktu" }),
       cell: ({ row }) =>
         renderSnippet(timeCell, { iso: row.original.createdAt }),
     },
     {
       accessorKey: "type",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Type" }),
+        renderSnippet(sortHeader, { column, label: "Jenis" }),
       cell: ({ row }) => renderSnippet(typeCell, { type: row.original.type }),
     },
     {
       accessorKey: "studentName",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Student" }),
+        renderSnippet(sortHeader, { column, label: "Siswa" }),
       cell: ({ row }) => renderSnippet(studentCell, { tx: row.original }),
     },
     {
@@ -234,7 +241,7 @@
     {
       accessorKey: "amount",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Amount" }),
+        renderSnippet(sortHeader, { column, label: "Jumlah" }),
       cell: ({ row }) => renderSnippet(amountCell, { tx: row.original }),
     },
     {
@@ -285,17 +292,17 @@
 </script>
 
 <svelte:head>
-  <title>Reversal</title>
+  <title>Pembatalan</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6 flex-1">
   <!-- Header -->
   <div class="flex items-start justify-between">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Reversal</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">Pembatalan</h1>
       <p class="text-sm text-muted-foreground mt-1">
-        Cancel a deposit or withdrawal. Reversal instantly creates a
-        <span class="text-primary font-medium">counter-entry</span> in the journal.
+        Batalkan setoran atau penarikan. Pembatalan langsung membuat
+        <span class="text-primary font-medium">entri lawan</span> di jurnal.
       </p>
     </div>
     <Button
@@ -319,7 +326,7 @@
           d="M9 12h6M9 16h4"
         />
       </svg>
-      View History
+      Lihat Riwayat
     </Button>
   </div>
 
@@ -344,7 +351,7 @@
           oninput={() => {
             pagination = { ...pagination, pageIndex: 0 };
           }}
-          placeholder="Search ref no, student, program..."
+          placeholder="Cari no. ref, siswa, program..."
           class="h-8 pl-8 text-xs w-60 bg-card"
         />
       </div>
@@ -568,7 +575,7 @@
                 colspan={columns.length}
                 class="h-20 text-center text-xs text-muted-foreground"
               >
-                No reversible transactions found.
+                Tidak ada transaksi yang dapat dibatalkan.
               </Table.Cell>
             </Table.Row>
           {/each}
@@ -578,10 +585,10 @@
 
   <!-- Pagination -->
   <div class="flex items-center justify-between text-xs text-muted-foreground">
-    <span>{filteredData.length} transactions · {dateRangeLabel}</span>
+    <span>{filteredData.length} transaksi · {dateRangeLabel}</span>
     <div class="flex items-center gap-4">
       <div class="flex items-center gap-2">
-        <span>Rows</span>
+        <span>Baris</span>
         <select
           class="rounded-md border px-2 py-1 bg-transparent font-medium text-xs focus:outline-none"
           value={table.getState().pagination.pageSize}
@@ -599,7 +606,7 @@
           onclick={() => table.previousPage()}>‹</Button
         >
         <span class="px-3 py-1.5 bg-muted/50 rounded-md">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+          Halaman {table.getState().pagination.pageIndex + 1} dari {table.getPageCount() || 1}
         </span>
         <Button
           variant="outline"
@@ -618,7 +625,7 @@
 <ModalConfirmation
   open={confirmTx !== null}
   onClose={closeConfirm}
-  title="Reverse this transaction?"
+  title="Batalkan transaksi ini?"
   description={confirmTx
     ? `${confirmTx.studentName} · ${confirmTx.planCode} · ${fmt(confirmTx.amount)}`
     : ""}
@@ -636,11 +643,11 @@
     {#if confirmTx}
       <div class="rounded-lg bg-amber-50 border border-amber-200 px-3 py-2.5 space-y-1 text-left">
         <p class="text-[10px] font-bold uppercase tracking-widest text-amber-600">
-          Transaction to reverse
+          Transaksi yang akan dibatalkan
         </p>
         <p class="text-xs font-semibold">{confirmTx.referenceNo}</p>
         <p class="text-[11px] text-muted-foreground">
-          {confirmTx.planName} · {confirmTx.type === "DEPOSIT" ? "Deposit" : "Withdrawal"}
+          {confirmTx.planName} · {confirmTx.type === "DEPOSIT" ? "Setoran" : "Penarikan"}
         </p>
       </div>
     {/if}
@@ -650,13 +657,13 @@
         class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
         for="reversal-reason"
       >
-        Reason <span class="text-muted-foreground/50">(optional)</span>
+        Alasan <span class="text-muted-foreground/50">(opsional)</span>
       </label>
       <textarea
         id="reversal-reason"
         name="reason"
         rows={2}
-        placeholder="e.g. wrong amount entered, duplicate transaction..."
+        placeholder="mis. jumlah salah dimasukkan, transaksi duplikat..."
         class="w-full rounded-lg border bg-muted/40 px-3 py-2 text-xs resize-none focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/50"
       ></textarea>
     </div>
@@ -669,7 +676,7 @@
 
     <div class="flex gap-3 w-full">
       <Button type="button" variant="ghost" class="flex-1 h-10 text-xs font-bold" onclick={closeConfirm}>
-        Cancel
+        Batal
       </Button>
       <Button
         type="submit"
@@ -679,10 +686,10 @@
       >
         {#if $reversalSubmitting}
           <span class="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-          Processing…
+          Memproses…
         {:else}
           <HugeiconsIcon icon={ArrowTurnBackwardIcon} size={14} />
-          Confirm Reversal
+          Konfirmasi Pembatalan
         {/if}
       </Button>
     </div>
@@ -722,12 +729,12 @@
   {#if type === "DEPOSIT"}
     <span
       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-primary/10 text-primary"
-      >● deposit</span
+      >● setoran</span
     >
   {:else}
     <span
       class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-destructive/10 text-destructive"
-      >● withdrawal</span
+      >● penarikan</span
     >
   {/if}
 {/snippet}
@@ -778,6 +785,6 @@
         d="M3 3v5h5"
       /></svg
     >
-    Reverse
+    Batalkan
   </Button>
 {/snippet}

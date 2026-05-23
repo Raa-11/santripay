@@ -15,60 +15,69 @@
 		Tick02Icon,
 	} from '@hugeicons/core-free-icons';
 
+	// Terima data dari server (user yang sedang login)
 	let { data }: { data: PageData } = $props();
 
-	// ── Types ────────────────────────────────────────────
+	// Tipe data siswa yang dicari via pencarian
 	type Student = { id: string; nis: string; name: string; class: string | null; gender: string | null };
+	// Tipe data rekening tabungan santri di program tertentu
 	type Enrollment = {
 		id: string; currentAmount: number; status: string;
 		planId: string; planName: string; planCode: string; planType: string;
 		defaultTargetAmount: number | null;
 	};
+	// Tipe data riwayat setoran terbaru
 	type RecentDeposit = {
 		id: string; amount: number; type: string; isReversed: boolean;
 		createdAt: string; planCode: string; planName: string;
 	};
 
-	// ── State ─────────────────────────────────────────────
-	let searchQuery = $state('');
-	let searchResults = $state<Student[]>([]);
-	let searchLoading = $state(false);
-	let searchOpen = $state(false);
-	let searchTimeout: ReturnType<typeof setTimeout> | null = null;
+	// State untuk kotak pencarian siswa
+	let searchQuery = $state('');           // Isi teks pencarian
+	let searchResults = $state<Student[]>([]); // Hasil siswa yang cocok
+	let searchLoading = $state(false);      // Sedang loading hasil pencarian
+	let searchOpen = $state(false);         // Dropdown hasil pencarian terbuka/tertutup
+	let searchTimeout: ReturnType<typeof setTimeout> | null = null; // Timeout debounce pencarian
 
-	let selectedStudent = $state<Student | null>(null);
-	let enrollments = $state<Enrollment[]>([]);
-	let enrollmentsLoading = $state(false);
-	let selectedEnrollment = $state<Enrollment | null>(null);
-	let programOpen = $state(false);
+	let selectedStudent = $state<Student | null>(null);     // Siswa yang sudah dipilih
+	let enrollments = $state<Enrollment[]>([]);             // Daftar program tabungan siswa terpilih
+	let enrollmentsLoading = $state(false);                 // Sedang memuat daftar program
+	let selectedEnrollment = $state<Enrollment | null>(null); // Program tabungan yang dipilih
+	let programOpen = $state(false);                        // Dropdown program terbuka/tertutup
 
-	let recentDeposits = $state<RecentDeposit[]>([]);
+	let recentDeposits = $state<RecentDeposit[]>([]); // Daftar setoran terbaru siswa terpilih
 
-	let amount = $state(0);
-	const presets = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000];
+	let amount = $state(0); // Nominal setoran yang diinput
+	const presets = [1_000, 2_000, 5_000, 10_000, 20_000, 50_000]; // Tombol preset nominal cepat
 
-	let submitting = $state(false);
-	let lastRefNo = $state('');
-	let depositSuccess = $state(false);
-	let depositError = $state('');
+	let submitting = $state(false);    // Sedang mengirim form ke server
+	let lastRefNo = $state('');        // Nomor referensi transaksi terakhir yang berhasil
+	let depositSuccess = $state(false); // Status apakah setoran baru saja sukses
+	let depositError = $state('');      // Pesan error jika setoran gagal
 
-	// ── Derived ───────────────────────────────────────────
+	// Saldo sebelum setoran (diambil dari rekening yang dipilih)
 	const balanceBefore = $derived(selectedEnrollment?.currentAmount ?? 0);
+	// Saldo setelah setoran (saldo lama + nominal setoran)
 	const balanceAfter = $derived(balanceBefore + (amount > 0 ? amount : 0));
+	// Tombol submit aktif hanya jika program dipilih, nominal > 0, dan tidak sedang submit
 	const canSubmit = $derived(!!selectedEnrollment && amount > 0 && !submitting);
 
+	// Label tanggal dan jam saat ini untuk ditampilkan di ringkasan transaksi
 	const now = new Date();
 	const dateLabel = new Intl.DateTimeFormat('en-GB', {
 		day: '2-digit', month: 'short', year: 'numeric',
 		hour: '2-digit', minute: '2-digit',
 	}).format(now);
 
+	// Format angka ke Rupiah (Contoh: Rp 50.000)
 	const fmt = (n: number) => 'Rp ' + new Intl.NumberFormat('id-ID').format(Math.round(n));
 
+	// Ambil inisial nama siswa (Contoh: "Budi Santoso" → "BS")
 	function getInitials(name: string) {
 		return name.split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
 	}
 
+	// Format waktu: kalau transaksi hari ini tampil jam saja, kalau beda hari tampil tanggal + jam
 	function txDateTime(iso: string): string {
 		const d = new Date(iso);
 		const today = new Date();
@@ -80,22 +89,24 @@
 			' · ' + d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 	}
 
-	// ── Search logic ──────────────────────────────────────
+	// Fungsi pencarian siswa dengan debounce 280ms (biar tidak terlalu sering hit API)
 	function onSearchInput() {
-		if (searchTimeout) clearTimeout(searchTimeout);
-		if (searchQuery.length < 2) { searchResults = []; searchOpen = false; return; }
+		if (searchTimeout) clearTimeout(searchTimeout); // Batalkan pencarian sebelumnya
+		if (searchQuery.length < 2) { searchResults = []; searchOpen = false; return; } // Minimal 2 karakter
 		searchTimeout = setTimeout(async () => {
 			searchLoading = true;
 			try {
+				// Hit API pencarian siswa
 				const res = await fetch(`/api/students/search?q=${encodeURIComponent(searchQuery)}`);
 				searchResults = await res.json();
-				searchOpen = searchResults.length > 0;
+				searchOpen = searchResults.length > 0; // Buka dropdown kalau ada hasil
 			} finally {
 				searchLoading = false;
 			}
 		}, 280);
 	}
 
+	// Ketika siswa dipilih dari dropdown: simpan datanya, kosongkan pencarian, lalu muat rekening & riwayat
 	async function selectStudent(s: Student) {
 		selectedStudent = s;
 		searchQuery = '';
@@ -106,6 +117,7 @@
 		await Promise.all([loadEnrollments(s.id), loadRecentDeposits(s.id)]);
 	}
 
+	// Reset semua state kalau siswa dihapus dari pilihan
 	function clearStudent() {
 		selectedStudent = null;
 		selectedEnrollment = null;
@@ -116,13 +128,13 @@
 		depositError = '';
 	}
 
-	// ── Enrollments ───────────────────────────────────────
+	// Muat daftar rekening tabungan milik siswa dari API
 	async function loadEnrollments(studentId: string) {
 		enrollmentsLoading = true;
 		try {
 			const res = await fetch(`/api/students/${studentId}/enrollments`);
 			enrollments = await res.json();
-			// Sync selected enrollment balance if still selected
+			// Kalau sudah ada program yang dipilih, refresh saldo terbaru setelah setoran
 			if (selectedEnrollment) {
 				const updated = enrollments.find((e) => e.id === selectedEnrollment!.id);
 				if (updated) selectedEnrollment = updated;
@@ -132,40 +144,43 @@
 		}
 	}
 
+	// Tandai program tabungan yang dipilih dan tutup dropdown
 	function selectEnrollment(e: Enrollment) {
 		selectedEnrollment = e;
 		programOpen = false;
 	}
 
-	// ── Recent deposits ───────────────────────────────────
+	// Muat riwayat setoran terbaru milik siswa dari API
 	async function loadRecentDeposits(studentId: string) {
 		const res = await fetch(`/api/students/${studentId}/recent-deposits?type=DEPOSIT`);
 		recentDeposits = await res.json();
 	}
 
-	// ── Form submit ───────────────────────────────────────
+	// Handler enhance SvelteKit: dijalankan saat form disubmit
 	const handleEnhance = () => {
-		submitting = true;
+		submitting = true; // Tandai form sedang diproses
 		depositError = '';
 		return async ({ result }: { result: { type: string; data?: Record<string, unknown> } }) => {
 			submitting = false;
 			if (result.type === 'success') {
-				lastRefNo = String(result.data?.referenceNo ?? '');
-				depositSuccess = true;
-				amount = 0;
+				lastRefNo = String(result.data?.referenceNo ?? ''); // Simpan nomor referensi setoran
+				depositSuccess = true; // Tandai sukses agar badge hijau muncul
+				amount = 0; // Reset nominal
 				if (selectedStudent) {
+					// Refresh saldo dan riwayat setelah setoran berhasil
 					await Promise.all([
 						loadEnrollments(selectedStudent.id),
 						loadRecentDeposits(selectedStudent.id),
 					]);
 				}
-				setTimeout(() => { depositSuccess = false; }, 4000);
+				setTimeout(() => { depositSuccess = false; }, 4000); // Sembunyikan badge sukses setelah 4 detik
 			} else if (result.type === 'failure') {
-				depositError = String(result.data?.error ?? 'Failed to record deposit');
+				depositError = String(result.data?.error ?? 'Failed to record deposit'); // Tampilkan pesan error
 			}
 		};
 	};
 
+	// Reset form ke kondisi awal
 	function reset() {
 		amount = 0;
 		depositSuccess = false;
@@ -174,7 +189,7 @@
 </script>
 
 <svelte:head>
-	<title>Deposits</title>
+	<title>Setoran</title>
 </svelte:head>
 
 <div class="flex flex-col gap-6 flex-1">
@@ -182,16 +197,16 @@
 	<!-- Header -->
 	<div class="flex items-start justify-between">
 		<div>
-			<h1 class="text-2xl font-semibold tracking-tight">Deposits</h1>
+			<h1 class="text-2xl font-semibold tracking-tight">Setoran</h1>
 			<p class="text-sm text-muted-foreground mt-1">
-				Record student savings deposits to their
-				<span class="text-primary font-medium">selected program</span>.
-				Each entry is logged to the journal.
+				Catat setoran tabungan siswa ke
+				<span class="text-primary font-medium">program yang dipilih</span>.
+				Setiap entri dicatat ke dalam jurnal.
 			</p>
 		</div>
 		<Button variant="outline" size="sm" class="gap-2 text-xs" href="/transactions/transaction-history">
 			<HugeiconsIcon icon={File01Icon} size={14} />
-			View History
+			Lihat Riwayat
 		</Button>
 	</div>
 
@@ -204,14 +219,14 @@
 			<input type="hidden" name="amount" value={amount} />
 
 			<div class="flex items-center gap-2.5">
-				<span class="text-sm font-semibold">Deposit Form</span>
-				<span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">draft</span>
+				<span class="text-sm font-semibold">Form Setoran</span>
+				<span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">draf</span>
 				{#if depositSuccess}
 					<span class="flex items-center gap-1 text-[10px] font-medium text-emerald-600">
-						<HugeiconsIcon icon={Tick02Icon} size={11} /> saved · {lastRefNo}
+						<HugeiconsIcon icon={Tick02Icon} size={11} /> tersimpan · {lastRefNo}
 					</span>
 				{:else}
-					<span class="text-[10px] text-muted-foreground">· unsaved</span>
+					<span class="text-[10px] text-muted-foreground">· belum disimpan</span>
 				{/if}
 			</div>
 
@@ -225,7 +240,7 @@
 
 			<!-- Student field -->
 			<Field.Field class="space-y-1.5">
-				<Field.Label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Student</Field.Label>
+				<Field.Label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Siswa</Field.Label>
 				<Field.Content>
 					{#if selectedStudent}
 						<div class="flex items-center gap-3 rounded-lg border bg-muted/40 px-3 py-2.5">
@@ -252,11 +267,11 @@
 									oninput={onSearchInput}
 									onfocus={() => { if (searchResults.length > 0) searchOpen = true; }}
 									onblur={() => setTimeout(() => { searchOpen = false; }, 150)}
-									placeholder="Search by NIS or name..."
+									placeholder="Cari berdasarkan NIS atau nama..."
 									class="flex-1 bg-transparent py-2.5 text-sm outline-none placeholder:text-muted-foreground/60"
 								/>
 								{#if searchLoading}
-									<span class="text-[10px] text-muted-foreground">searching…</span>
+									<span class="text-[10px] text-muted-foreground">mencari…</span>
 								{/if}
 							</div>
 
@@ -280,7 +295,7 @@
 								</div>
 							{:else if searchQuery.length >= 2 && !searchLoading && searchOpen === false && searchResults.length === 0}
 								<div class="absolute top-full left-0 right-0 z-50 mt-1 rounded-lg border bg-card shadow-lg px-3 py-3 text-sm text-muted-foreground">
-									No students found.
+									Siswa tidak ditemukan.
 								</div>
 							{/if}
 						</div>
@@ -290,23 +305,23 @@
 
 			<!-- Savings Program field -->
 			<Field.Field class="space-y-1.5">
-				<Field.Label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Savings Program</Field.Label>
+				<Field.Label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Program Tabungan</Field.Label>
 				<Field.Content>
 					{#if !selectedStudent}
 						<div class="flex items-center gap-3 rounded-lg border bg-muted/20 px-3 py-2.5 opacity-50">
 							<span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
 								<HugeiconsIcon icon={PiggyBankIcon} size={14} class="text-muted-foreground" />
 							</span>
-							<p class="text-sm text-muted-foreground">Select a student first</p>
+							<p class="text-sm text-muted-foreground">Pilih siswa terlebih dahulu</p>
 						</div>
 					{:else if enrollmentsLoading}
 						<div class="flex items-center gap-3 rounded-lg border bg-muted/20 px-3 py-2.5">
-							<p class="text-sm text-muted-foreground">Loading programs…</p>
+							<p class="text-sm text-muted-foreground">Memuat program…</p>
 						</div>
 					{:else if enrollments.length === 0}
 						<div class="flex items-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
 							<span class="text-amber-600 text-sm">⚠</span>
-							<p class="text-sm text-amber-700">Student is not enrolled in any active program.</p>
+							<p class="text-sm text-amber-700">Siswa tidak terdaftar di program aktif manapun.</p>
 						</div>
 					{:else if selectedEnrollment}
 						<div class="relative">
@@ -321,7 +336,7 @@
 								<div class="flex-1 min-w-0">
 									<p class="text-sm font-semibold truncate">{selectedEnrollment.planName}</p>
 									<p class="text-[11px] text-muted-foreground">
-										{selectedEnrollment.planCode} · {selectedEnrollment.planType === 'FLEXIBLE' ? 'Flexible' : 'Goal'}
+										{selectedEnrollment.planCode} · {selectedEnrollment.planType === 'FLEXIBLE' ? 'Fleksibel' : 'Target'}
 									</p>
 								</div>
 								<HugeiconsIcon icon={ArrowDown01Icon} size={14} class="text-muted-foreground shrink-0" />
@@ -336,7 +351,7 @@
 										>
 											<div class="flex-1 min-w-0">
 												<p class="text-sm font-medium truncate">{e.planName}</p>
-												<p class="text-[11px] text-muted-foreground">{e.planCode} · Balance: {fmt(e.currentAmount)}</p>
+												<p class="text-[11px] text-muted-foreground">{e.planCode} · Saldo: {fmt(e.currentAmount)}</p>
 											</div>
 										</button>
 									{/each}
@@ -354,7 +369,7 @@
 								<span class="flex size-8 shrink-0 items-center justify-center rounded-lg bg-muted">
 									<HugeiconsIcon icon={PiggyBankIcon} size={14} class="text-muted-foreground" />
 								</span>
-								<p class="flex-1 text-sm text-muted-foreground">Select a savings program…</p>
+								<p class="flex-1 text-sm text-muted-foreground">Pilih program tabungan…</p>
 								<HugeiconsIcon icon={ArrowDown01Icon} size={14} class="text-muted-foreground shrink-0" />
 							</button>
 							{#if programOpen}
@@ -367,7 +382,7 @@
 										>
 											<div class="flex-1 min-w-0">
 												<p class="text-sm font-medium truncate">{e.planName}</p>
-												<p class="text-[11px] text-muted-foreground">{e.planCode} · Balance: {fmt(e.currentAmount)}</p>
+												<p class="text-[11px] text-muted-foreground">{e.planCode} · Saldo: {fmt(e.currentAmount)}</p>
 											</div>
 										</button>
 									{/each}
@@ -380,7 +395,7 @@
 
 			<!-- Amount field -->
 			<Field.Field class="space-y-1.5">
-				<Field.Label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Amount</Field.Label>
+				<Field.Label class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Jumlah</Field.Label>
 				<Field.Content>
 					<div class="relative">
 						<span class="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-medium text-muted-foreground">Rp</span>
@@ -414,19 +429,19 @@
 			<!-- Footer -->
 			<div class="flex items-center justify-between">
 				<p class="text-[11px] text-muted-foreground">
-					Logged to <span class="font-medium text-foreground">journal entry</span> · audit trail active
+					Dicatat ke <span class="font-medium text-foreground">entri jurnal</span> · jejak audit aktif
 				</p>
 				<div class="flex items-center gap-2">
 					<Button type="button" variant="ghost" size="sm" class="text-xs h-9" onclick={reset}>
-						Reset
+						Atur Ulang
 					</Button>
 					<Button type="submit" size="sm" class="text-xs h-9 gap-1.5 font-semibold" disabled={!canSubmit}>
 						{#if submitting}
 							<span class="size-3.5 animate-spin rounded-full border-2 border-current border-t-transparent"></span>
-							Recording…
+							Menyimpan…
 						{:else}
 							<HugeiconsIcon icon={ArrowDown01Icon} size={14} />
-							Record Deposit
+							Catat Setoran
 						{/if}
 					</Button>
 				</div>
@@ -435,10 +450,10 @@
 
 		<!-- Summary card -->
 		<div class="rounded-xl border bg-card p-5 flex flex-col gap-4">
-			<p class="text-sm font-semibold">Summary</p>
+			<p class="text-sm font-semibold">Ringkasan</p>
 
 			<div class="space-y-0.5">
-				<p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Balance Before</p>
+				<p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saldo Sebelum</p>
 				<p class="text-2xl font-bold tracking-tight">{fmt(balanceBefore)}</p>
 			</div>
 
@@ -449,12 +464,12 @@
 			</div>
 
 			<div class="space-y-0.5">
-				<p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">+ Deposit</p>
+				<p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">+ Setoran</p>
 				<p class="text-xl font-bold text-primary">+ {fmt(amount > 0 ? amount : 0)}</p>
 			</div>
 
 			<div class="rounded-lg bg-muted/50 px-4 py-3 space-y-0.5">
-				<p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Balance After</p>
+				<p class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Saldo Setelah</p>
 				<p class="text-2xl font-bold tracking-tight">{fmt(balanceAfter)}</p>
 			</div>
 
@@ -464,7 +479,7 @@
 			<div class="space-y-2.5">
 				{#each [
 					{ label: 'Program', value: selectedEnrollment?.planCode ?? '—' },
-					{ label: 'Date', value: dateLabel },
+					{ label: 'Tanggal', value: dateLabel },
 					{ label: 'Operator', value: data.user?.name ?? '—' },
 				] as row}
 					<div class="flex items-center justify-between">
@@ -480,11 +495,11 @@
 	{#if selectedStudent}
 		<div class="rounded-xl border bg-card p-5 space-y-3">
 			<div class="flex items-center justify-between">
-				<p class="text-sm font-semibold">Recent Deposits</p>
+				<p class="text-sm font-semibold">Setoran Terbaru</p>
 				<span class="text-[11px] text-muted-foreground">{selectedStudent.name}</span>
 			</div>
 			{#if recentDeposits.length === 0}
-				<p class="py-4 text-center text-sm text-muted-foreground">No deposit history yet.</p>
+				<p class="py-4 text-center text-sm text-muted-foreground">Belum ada riwayat setoran.</p>
 			{:else}
 				<div>
 					{#each recentDeposits as tx, i (tx.id)}
@@ -494,7 +509,7 @@
 								<span class="text-[10px] font-mono font-bold text-muted-foreground bg-muted px-1.5 py-0.5 rounded shrink-0">{tx.planCode}</span>
 								<span class="text-xs text-foreground font-semibold truncate max-w-[200px] md:max-w-[300px]">{tx.planName}</span>
 								{#if tx.isReversed}
-									<span class="text-[10px] text-amber-600 font-medium shrink-0">reversed</span>
+									<span class="text-[10px] text-amber-600 font-medium shrink-0">dibalik</span>
 								{/if}
 							</div>
 							<span class="text-xs font-bold tabular-nums {tx.isReversed ? 'text-muted-foreground line-through' : tx.type === 'DEPOSIT' ? 'text-primary' : 'text-red-600'}">

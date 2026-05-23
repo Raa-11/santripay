@@ -1,39 +1,52 @@
+// Import tipe data RequestHandler bawaan SvelteKit untuk handle request API GET
 import type { RequestHandler } from './$types';
+// Import helper 'json' dari SvelteKit buat balikin data format JSON
 import { json } from '@sveltejs/kit';
+// Import koneksi database postgres
 import { db } from '$lib/server/db';
+// Import skema tabel: savingPlans, studentSavings, ledgerEntries, dan students
 import { savingPlans, studentSavings, ledgerEntries, students } from '$lib/server/db/schema';
+// Import fungsi operator query Drizzle ORM
 import { eq, and, sql, gte, lt, desc, isNull } from 'drizzle-orm';
 
+// Handler request GET untuk mengambil data ringkasan statistik dasbor
 export const GET: RequestHandler = async ({ locals }) => {
+	// Validasi: Kalau user belum login, tolak akses dengan error 401
 	if (!locals.user) return new Response('Unauthorized', { status: 401 });
 
+	// Ambil waktu saat ini dalam UTC untuk kalkulasi filter rentang tanggal
 	const now = new Date();
 	const utcY = now.getUTCFullYear();
 	const utcM = now.getUTCMonth();
 	const utcD = now.getUTCDate();
 
+	// Tentukan waktu awal hari ini, besok, kemarin, dan awal bulan ini
 	const todayStart    = new Date(Date.UTC(utcY, utcM, utcD));
 	const tomorrowStart = new Date(Date.UTC(utcY, utcM, utcD + 1));
 	const yesterday     = new Date(Date.UTC(utcY, utcM, utcD - 1));
 	const monthStart    = new Date(Date.UTC(utcY, utcM, 1));
 
+	// Tentukan hari aktif dalam seminggu untuk rentang statistik mingguan (Senin-Minggu)
 	const dow           = now.getUTCDay();
 	const daysFromMon   = dow === 0 ? 6 : dow - 1;
 	const weekStart     = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon));
 	const weekEnd       = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon + 7));
 	const prevWeekStart = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon - 7));
 
+	// Tentukan batas awal tahun ini dan awal tahun depan
 	const yearStart = new Date(Date.UTC(utcY, 0, 1));
 	const yearEnd   = new Date(Date.UTC(utcY + 1, 0, 1));
 
+	// Jalankan semua query database secara paralel agar loading halaman dasbor cepat
 	const [
-		[savingsStatsRow],
-		[ledgerStatsRow],
-		weeklyRaw,
-		yearlyRaw,
-		recentTx,
-		programRows,
+		[savingsStatsRow], // Data total saldo dan jumlah siswa aktif
+		[ledgerStatsRow],  // Data total setoran dan penarikan berdasarkan tanggal
+		weeklyRaw,         // Data grafik setoran dan penarikan mingguan
+		yearlyRaw,         // Data grafik setoran dan penarikan tahunan
+		recentTx,          // Daftar 8 transaksi terbaru
+		programRows,       // Daftar 4 program tabungan aktif terpopuler
 	] = await Promise.all([
+		// Query 1: Total saldo aktif dan jumlah santri yang terdaftar
 		db
 			.select({
 				totalBalance:  sql<string>`COALESCE(SUM(${studentSavings.currentAmount}::numeric), 0)`,
@@ -43,6 +56,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			.from(studentSavings)
 			.where(isNull(studentSavings.deletedAt)),
 
+		// Query 2: Ringkasan total setoran & penarikan untuk hari ini, kemarin, minggu ini, dan bulan ini
 		db
 			.select({
 				grossDeposits:    sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT'  THEN ${ledgerEntries.amount}::numeric END), 0)`,
@@ -55,8 +69,9 @@ export const GET: RequestHandler = async ({ locals }) => {
 				thisMonthTotal:   sql<string>`COALESCE(SUM(CASE WHEN ${ledgerEntries.type} = 'DEPOSIT' AND ${ledgerEntries.createdAt} >= ${monthStart}    THEN ${ledgerEntries.amount}::numeric END), 0)`,
 			})
 			.from(ledgerEntries)
-			.where(eq(ledgerEntries.isReversed, false)),
+			.where(eq(ledgerEntries.isReversed, false)), // Jangan hitung transaksi yang sudah dibatalkan
 
+		// Query 3: Ambil data transaksi harian minggu ini untuk data grafik
 		db
 			.select({
 				day:   sql<string>`TO_CHAR(DATE_TRUNC('day', ${ledgerEntries.createdAt}), 'YYYY-MM-DD')`,
@@ -68,6 +83,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			.groupBy(sql`DATE_TRUNC('day', ${ledgerEntries.createdAt})`, ledgerEntries.type)
 			.orderBy(sql`DATE_TRUNC('day', ${ledgerEntries.createdAt})`),
 
+		// Query 4: Ambil data transaksi bulanan tahun ini untuk data grafik
 		db
 			.select({
 				month: sql<string>`TO_CHAR(DATE_TRUNC('month', ${ledgerEntries.createdAt}), 'YYYY-MM')`,
@@ -79,6 +95,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			.groupBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`, ledgerEntries.type)
 			.orderBy(sql`DATE_TRUNC('month', ${ledgerEntries.createdAt})`),
 
+		// Query 5: Ambil 8 transaksi terakhir untuk daftar aktivitas terbaru di dasbor
 		db
 			.select({
 				id:          ledgerEntries.id,
@@ -97,6 +114,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			.orderBy(desc(ledgerEntries.createdAt))
 			.limit(8),
 
+		// Query 6: Ambil 4 program tabungan terpopuler berdasarkan keaktifan
 		db
 			.select({
 				id:                   savingPlans.id,
@@ -118,6 +136,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 			.limit(4),
 	]);
 
+	// Susun data mingguan dari database ke dalam map (agar mudah dicari)
 	const weeklyDepMap = new Map<string, number>();
 	const weeklyWthMap = new Map<string, number>();
 	for (const r of weeklyRaw) {
@@ -125,6 +144,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		else weeklyWthMap.set(r.day, Number(r.total));
 	}
 
+	// Buat struktur array 7 hari (Senin-Minggu) untuk disajikan ke grafik frontend
 	const dailyData = Array.from({ length: 7 }, (_, i) => {
 		const d = new Date(Date.UTC(utcY, utcM, utcD - daysFromMon + i));
 		const key = d.toISOString().slice(0, 10);
@@ -136,6 +156,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		};
 	});
 
+	// Susun data bulanan tahunan ke dalam map
 	const yearlyDepMap = new Map<string, number>();
 	const yearlyWthMap = new Map<string, number>();
 	for (const r of yearlyRaw) {
@@ -143,6 +164,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		else yearlyWthMap.set(r.month, Number(r.total));
 	}
 
+	// Buat struktur array 12 bulan (Jan-Des) untuk grafik tahunan di frontend
 	const monthlyData = Array.from({ length: 12 }, (_, i) => {
 		const key = `${utcY}-${String(i + 1).padStart(2, '0')}`;
 		const d   = new Date(Date.UTC(utcY, i, 1));
@@ -154,6 +176,7 @@ export const GET: RequestHandler = async ({ locals }) => {
 		};
 	});
 
+	// Kembalikan semua data statistik dalam format JSON yang bersih dan rapi
 	return json({
 		totalBalance:       Number(savingsStatsRow?.totalBalance ?? 0),
 		totalDeposits:      Number(ledgerStatsRow?.grossDeposits ?? 0),

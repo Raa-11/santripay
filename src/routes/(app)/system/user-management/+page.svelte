@@ -120,11 +120,11 @@
       if (form.valid) {
         showDeleteConfirm = false;
         clearSelection();
-        toast.success(form.message || "Action completed");
+        toast.success(form.message || "Aksi berhasil");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Deletion failed"),
+      toast.error(result.error.message || "Penghapusan gagal"),
   });
 
   // ── 2. TABLE STATE ──
@@ -160,7 +160,7 @@
     },
     {
       accessorKey: "name",
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Name" }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Nama" }),
       cell: ({ row }) => renderSnippet(nameCell, { user: row.original }),
     },
     {
@@ -175,7 +175,7 @@
     },
     {
       accessorKey: "createdAt",
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Joined" }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Bergabung" }),
       cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
@@ -269,11 +269,11 @@
   open={showDeleteConfirm}
   onClose={() => (showDeleteConfirm = false)}
   title={userToDelete
-    ? "Delete User Account?"
-    : `Delete ${selectedCount} Accounts?`}
+    ? "Hapus Akun Pengguna?"
+    : `Hapus ${selectedCount} Akun?`}
   description={userToDelete
-    ? `Are you sure you want to delete ${userToDelete.name}? This action cannot be undone.`
-    : `Are you sure you want to delete ${selectedCount} selected users? All related data will be permanently removed.`}
+    ? `Apakah Anda yakin ingin menghapus ${userToDelete.name}? Tindakan ini tidak dapat dibatalkan.`
+    : `Apakah Anda yakin ingin menghapus ${selectedCount} pengguna yang dipilih? Semua data terkait akan dihapus secara permanen.`}
   icon={Delete01Icon}
 >
   <form
@@ -294,13 +294,13 @@
     <Button
       variant="ghost"
       class="flex-1 h-10 text-xs font-bold"
-      onclick={() => (showDeleteConfirm = false)}>Cancel</Button
+      onclick={() => (showDeleteConfirm = false)}>Batal</Button
     >
     <Button
       type="submit"
       variant="destructive"
       class="flex-1 h-10 text-xs font-bold shadow-lg shadow-destructive/20"
-      >Yes, Delete</Button
+      >Ya, Hapus</Button
     >
   </form>
 </ModalConfirmation>
@@ -308,9 +308,9 @@
 <Modal
   open={showAdd}
   onClose={() => (showAdd = false)}
-  title="Add New User"
+  title="Tambah Pengguna Baru"
   icon={UserAdd01Icon}
-  description="Create a new system account."
+  description="Buat akun sistem baru."
 >
   <form
     id="add-user-form"
@@ -322,7 +322,7 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Full Name</Field.Label
+        >Nama Lengkap</Field.Label
       >
       <Field.Content
         ><Input
@@ -340,7 +340,7 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Email Address</Field.Label
+        >Alamat Email</Field.Label
       >
       <Field.Content
         ><Input
@@ -360,7 +360,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Password</Field.Label
+          >Kata Sandi</Field.Label
         >
         <Field.Content
           ><Input
@@ -375,7 +375,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Confirm</Field.Label
+          >Konfirmasi</Field.Label
         >
         <Field.Content
           ><Input
@@ -393,13 +393,13 @@
     <Button
       variant="ghost"
       class="h-10 px-4 text-xs font-bold"
-      onclick={() => (showAdd = false)}>Discard</Button
+      onclick={() => (showAdd = false)}>Batal</Button
     >
     <Button
       type="submit"
       form="add-user-form"
       class="h-10 px-4 text-xs font-bold shadow-lg shadow-primary/20"
-      >Create User</Button
+      >Buat Pengguna</Button
     >
   {/snippet}
 </Modal>
@@ -407,7 +407,7 @@
 <Modal
   open={showEdit}
   onClose={() => (showEdit = false)}
-  title="Edit Profile"
+  title="Edit Profil"
   icon={PencilEdit01Icon}
 >
   <form
@@ -421,7 +421,7 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Full Name</Field.Label
+        >Nama Lengkap</Field.Label
       >
       <Field.Content
         ><Input
@@ -439,7 +439,7 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Email Address</Field.Label
+        >Alamat Email</Field.Label
       >
       <Field.Content
         ><Input
@@ -460,12 +460,12 @@
     <Button
       variant="ghost"
       class="h-10 px-4 text-xs font-bold"
-      onclick={() => (showEdit = false)}>Cancel</Button
+      onclick={() => (showEdit = false)}>Batal</Button
     >
     <Button
       type="submit"
       form="edit-user-form"
-      class="h-10 px-4 text-xs font-bold shadow-sm">Save Changes</Button
+      class="h-10 px-4 text-xs font-bold shadow-sm">Simpan Perubahan</Button
     >
   {/snippet}
 </Modal>
@@ -473,7 +473,7 @@
 <Modal
   open={showPassword}
   onClose={() => (showPassword = false)}
-  title="Update Password"
+  title="Perbarui Kata Sandi"
   icon={LockPasswordIcon}
 >
   <form
@@ -487,7 +487,7 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Old Password</Field.Label
+        >Kata Sandi Lama</Field.Label
       >
       <Field.Content
         ><Input
@@ -507,7 +507,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >New Password</Field.Label
+          >Kata Sandi Baru</Field.Label
         >
         <Field.Content
           ><Input
@@ -526,7 +526,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Confirm</Field.Label
+          >Konfirmasi</Field.Label
         >
         <Field.Content
           ><Input
@@ -548,12 +548,12 @@
     <Button
       variant="ghost"
       class="h-10 px-4 text-xs font-bold"
-      onclick={() => (showPassword = false)}>Cancel</Button
+      onclick={() => (showPassword = false)}>Batal</Button
     >
     <Button
       type="submit"
       form="password-user-form"
-      class="h-10 px-4 text-xs font-bold shadow-sm">Update Password</Button
+      class="h-10 px-4 text-xs font-bold shadow-sm">Perbarui Kata Sandi</Button
     >
   {/snippet}
 </Modal>
@@ -564,9 +564,9 @@
   <!-- HEADER -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">User Management</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">Manajemen Pengguna</h1>
       <p class="text-muted-foreground mt-1 text-sm">
-        Manage system accounts and access control.
+        Kelola akun sistem dan hak akses pengguna.
       </p>
     </div>
     <Button
@@ -576,7 +576,7 @@
         showAdd = true;
       }}
     >
-      <HugeiconsIcon icon={UserAdd01Icon} size={16} /> Add User
+      <HugeiconsIcon icon={UserAdd01Icon} size={16} /> Tambah Pengguna
     </Button>
   </div>
 
@@ -587,7 +587,7 @@
         <HugeiconsIcon icon={Search01Icon} size={14} />
       </span>
       <Input
-        placeholder="Search users..."
+        placeholder="Cari pengguna..."
         value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
         oninput={(e) => table.getColumn("name")?.setFilterValue(e.currentTarget.value)}
         class="h-8 pl-8 text-xs bg-card"
@@ -598,12 +598,12 @@
       <DropdownMenu.Trigger>
         {#snippet child({ props })}
           <Button {...props} variant="outline" size="sm" class="gap-1.5 h-8 text-xs font-semibold">
-            View
+            Tampilan
           </Button>
         {/snippet}
       </DropdownMenu.Trigger>
       <DropdownMenu.Content align="end" class="min-w-40 rounded-lg border p-1 shadow-md bg-card">
-        <p class="text-muted-foreground px-2 py-1 text-[11px] font-medium uppercase tracking-wide">Toggle columns</p>
+        <p class="text-muted-foreground px-2 py-1 text-[11px] font-medium uppercase tracking-wide">Tampilkan Kolom</p>
         {#each table.getAllColumns().filter((col) => col.getCanHide()) as column (column.id)}
           <DropdownMenu.CheckboxItem
             class="capitalize text-xs rounded-md px-2 py-1.5 focus:bg-accent focus:text-accent-foreground"
@@ -664,7 +664,7 @@
         {:else}
           <Table.Row>
             <Table.Cell colspan={columns.length} class="h-20 text-center text-xs">
-              No results.
+              Tidak ada data.
             </Table.Cell>
           </Table.Row>
         {/each}
@@ -675,11 +675,11 @@
   <!-- PAGINATION -->
   <div class="flex items-center justify-between text-xs text-muted-foreground">
     <span>
-      {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
+      {table.getFilteredSelectedRowModel().rows.length} dari {table.getFilteredRowModel().rows.length} baris dipilih
     </span>
     <div class="flex items-center gap-4">
       <div class="flex items-center gap-2">
-        <span>Rows per page</span>
+        <span>Baris per halaman</span>
         <select
           class="rounded-md border px-2 py-1 bg-transparent font-medium text-xs focus:outline-none"
           value={table.getState().pagination.pageSize}
@@ -701,7 +701,7 @@
           ‹
         </Button>
         <span class="px-3 py-1.5 bg-muted/50 rounded-md">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount()}
+          Halaman {table.getState().pagination.pageIndex + 1} dari {table.getPageCount()}
         </span>
         <Button
           variant="outline"
@@ -722,7 +722,7 @@
   <div
     class="flex items-center gap-1 rounded-md border bg-background px-1 py-0.5"
   >
-    <span class="px-2 text-[11px] font-bold">{selectedCount} selected</span>
+    <span class="px-2 text-[11px] font-bold">{selectedCount} dipilih</span>
     <div class="h-4 w-[1px] bg-border"></div>
     <ActionBarItem
       variant="ghost"
@@ -745,7 +745,7 @@
           if (selectedUser) openEdit(selectedUser);
         }}
       >
-        <HugeiconsIcon icon={PencilEdit01Icon} size={14} /> Edit
+        <HugeiconsIcon icon={PencilEdit01Icon} size={14} /> Edit Profil
       </ActionBarItem>
     {/if}
     <ActionBarItem
@@ -754,7 +754,7 @@
       class="h-8 gap-1.5 bg-red-50 px-3 text-[11px] font-bold text-red-600 hover:bg-red-100 border-none"
       onSelect={() => openDeleteConfirm()}
     >
-      <HugeiconsIcon icon={Delete02Icon} size={14} /> Delete Selected
+      <HugeiconsIcon icon={Delete02Icon} size={14} /> Hapus Terpilih
     </ActionBarItem>
   </ActionBarGroup>
 </ActionBar>
@@ -817,7 +817,7 @@
         ? 'bg-emerald-500'
         : 'bg-amber-400'}"
     ></span>
-    {emailVerified ? "Verified" : "Unverified"}
+    {emailVerified ? "Terverifikasi" : "Belum Terverifikasi"}
   </span>
 {/snippet}
 
@@ -837,19 +837,19 @@
       <DropdownMenu.Item
         class="gap-2 text-xs"
         onclick={() => openEdit(row.original)}
-        ><HugeiconsIcon icon={PencilEdit01Icon} size={13} /> Edit Profile</DropdownMenu.Item
+        ><HugeiconsIcon icon={PencilEdit01Icon} size={13} /> Edit Profil</DropdownMenu.Item
       >
       <DropdownMenu.Item
         class="gap-2 text-xs"
         onclick={() => openPassword(row.original)}
-        ><HugeiconsIcon icon={LockPasswordIcon} size={13} /> Update Password</DropdownMenu.Item
+        ><HugeiconsIcon icon={LockPasswordIcon} size={13} /> Perbarui Kata Sandi</DropdownMenu.Item
       >
       {#if row.original.id !== data.currentUserId}
         <DropdownMenu.Separator />
         <DropdownMenu.Item
           class="text-destructive gap-2 text-xs"
           onclick={() => openDeleteConfirm(row.original)}
-          ><HugeiconsIcon icon={Delete01Icon} size={13} /> Delete Account</DropdownMenu.Item
+          ><HugeiconsIcon icon={Delete01Icon} size={13} /> Hapus Akun</DropdownMenu.Item
         >
       {/if}
     </DropdownMenu.Content>

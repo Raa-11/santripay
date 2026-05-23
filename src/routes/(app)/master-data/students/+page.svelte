@@ -1,3 +1,45 @@
+<!--
+  ╔══════════════════════════════════════════════════════════╗
+  ║  HALAMAN   : Manajemen Data Siswa                        ║
+  ║  RUTE      : /master-data/students                       ║
+  ╚══════════════════════════════════════════════════════════╝
+
+  TUJUAN
+    Halaman ini digunakan untuk mengelola data siswa secara
+    lengkap. Admin dapat melihat daftar seluruh siswa (aktif
+    maupun tidak aktif), menambah siswa baru, mengedit data
+    yang sudah ada, menghapus siswa, serta mengubah status
+    aktif/tidak aktif secara massal (bulk action).
+
+  DATA YANG DIMUAT (dari +page.server.ts)
+    - items          : array semua siswa dari tabel students
+    - addForm        : form kosong untuk menambah siswa baru
+    - editForm       : form yang diisi data siswa yang diedit
+    - deleteForm     : form hapus (berisi array id yang dihapus)
+    - bulkStatusForm : form ubah status massal (aktif/tidak aktif)
+
+  FITUR UTAMA
+    - Tabel data siswa dengan sort per kolom, filter nama,
+      paginasi, dan toggle visibilitas kolom
+    - Modal tambah siswa baru (NIS, nama, kelas, jenis kelamin,
+      alamat)
+    - Modal edit siswa (semua field + toggle status aktif)
+    - Konfirmasi hapus — bisa hapus 1 siswa atau banyak sekaligus
+    - Action bar massal: muncul di bagian bawah layar saat ada
+      baris yang dipilih, berisi tombol Aktifkan, Nonaktifkan,
+      dan Hapus Terpilih
+    - Toggle kolom: dropdown "Tampilan" untuk show/hide kolom
+
+  CATATAN TEKNIS
+    Tabel menggunakan @tanstack/table-core (bukan komponen
+    shadcn Table biasa). Semua logika sort, filter, paginasi,
+    dan seleksi baris dikelola oleh instance `table` yang
+    dibuat via createSvelteTable(). State tabel disimpan
+    sebagai Svelte 5 $state sehingga reaktif secara otomatis.
+    Form dikelola dengan sveltekit-superforms; setiap aksi
+    (create, update, delete, bulkStatus) punya form-nya sendiri
+    agar tidak terjadi tabrakan state saat submit.
+-->
 <script lang="ts">
   import { HugeiconsIcon } from "@hugeicons/svelte";
   import {
@@ -49,17 +91,13 @@
   import Modal from "$lib/components/ui/modal.svelte";
   import ModalConfirmation from "$lib/components/ui/modal-confirmation.svelte";
 
-  // Logic
-  import { superForm } from "sveltekit-superforms";
-  import { toast } from "svelte-sonner";
-  import type { PageData } from "./$types";
-
+  // Mengambil data awal dari load server (+page.server.ts) ke dalam komponen
   let { data }: { data: PageData } = $props();
 
-  // ── 1. FORM STATE & ACTIONS ──
+  // ── 1. STATE FORM & AKSI SUBMIT (SUPERFORMS) ──
 
-  // Add Student
-  let showAdd = $state(false);
+  // Form Tambah Siswa Baru
+  let showAdd = $state(false); // State reaktif buat buka/tutup popup (modal) tambah siswa
   const {
     form: addForm,
     errors: addErrors,
@@ -67,17 +105,20 @@
     reset: addReset,
     constraints: addConstraints,
   } = superForm<any>(() => data.addForm, {
+    // Callback ketika submit selesai diproses server
     onUpdated: ({ form }) => {
       if (form.valid) {
-        (showAdd = false), addReset(), toast.success("Student created");
+        // Kalau berhasil, tutup modal, kosongkan isian form, dan munculkan notifikasi sukses
+        (showAdd = false), addReset(), toast.success("Siswa berhasil dibuat");
       } else if (form.message) toast.error(form.message);
     },
+    // Callback kalau terjadi error server/koneksi
     onError: ({ result }) =>
-      toast.error(result.error.message || "Failed to create student"),
+      toast.error(result.error.message || "Gagal membuat siswa"),
   });
 
-  // Edit Student
-  let showEdit = $state(false);
+  // Form Edit Data Siswa
+  let showEdit = $state(false); // State reaktif buat buka/tutup popup edit siswa
   const {
     form: editForm,
     errors: editErrors,
@@ -86,53 +127,64 @@
   } = superForm<any>(() => data.editForm, {
     onUpdated: ({ form }) => {
       if (form.valid) {
-        (showEdit = false), toast.success("Student updated");
+        // Kalau berhasil update, tutup modal dan tampilkan notifikasi
+        (showEdit = false), toast.success("Siswa berhasil diperbarui");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Update failed"),
+      toast.error(result.error.message || "Gagal memperbarui"),
   });
 
-  // Deletion
-  let showDeleteConfirm = $state(false);
-  let itemToDelete = $state<any>(null);
+  // Form Hapus Siswa (Bisa hapus satu atau banyak sekaligus)
+  let showDeleteConfirm = $state(false); // State reaktif konfirmasi hapus
+  let itemToDelete = $state<any>(null); // Menyimpan info data siswa mana yang sedang dipilih buat dihapus
   const { enhance: delEnhance } = superForm<any>(() => data.deleteForm, {
     onUpdated: ({ form }) => {
       if (form.valid) {
+        // Kalau sukses dihapus, tutup konfirmasi, hapus checklist centang tabel, dan tampilkan notifikasi
         (showDeleteConfirm = false),
           clearSelection(),
-          toast.success(form.message || "Action completed");
+          toast.success(form.message || "Siswa berhasil dihapus");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Deletion failed"),
+      toast.error(result.error.message || "Gagal menghapus"),
   });
 
-  // Bulk Status
-  let showStatusConfirm = $state(false);
-  let statusToSet = $state(false);
+  // Form Ubah Status Aktif/Nonaktif Massal
+  let showStatusConfirm = $state(false); // State konfirmasi ubah status massal
+  let statusToSet = $state(false); // Nilai status target yang mau diset (aktif atau nonaktif)
   const { enhance: statusEnhance, form: statusForm } = superForm<any>(() => data.bulkStatusForm, {
     onUpdated: ({ form }) => {
       if (form.valid) {
+        // Jika sukses update massal, tutup dialog konfirmasi, bersihkan seleksi centang, dan tampilkan toast sukses
         showStatusConfirm = false;
         clearSelection();
-        toast.success(form.message || "Status updated");
+        toast.success(form.message || "Status berhasil diperbarui");
       } else if (form.message) toast.error(form.message);
     },
-    onError: ({ result }) => toast.error(result.error.message || "Failed to update status"),
+    onError: ({ result }) => toast.error(result.error.message || "Gagal memperbarui status"),
   });
 
-  // ── 2. TABLE STATE ──
+  // ── 2. STATE TABEL TANSTACK ──
+  // State untuk melacak halaman tabel (index halaman & jumlah baris per halaman)
   let pagination = $state<PaginationState>({ pageIndex: 0, pageSize: 10 });
+  // State untuk melacak kolom mana yang diurutkan (sorting)
   let sorting = $state<SortingState>([]);
+  // State untuk input filter pencarian nama siswa
   let columnFilters = $state<ColumnFiltersState>([]);
+  // State untuk mencatat baris mana saja yang sedang diceklis (row selection)
   let rowSelection = $state<RowSelectionState>({});
+  // State untuk show/hide kolom tabel (kolom apa saja yang disembunyikan)
   let columnVisibility = $state<VisibilityState>({});
 
-  // ── 3. DERIVED LOGIC ──
+  // ── 3. STATE KONDISIONAL (DERIVED) ──
+  // Mengambil kumpulan ID baris siswa yang sedang diceklis secara otomatis
   const selectedIds = $derived(Object.keys(rowSelection));
+  // Jumlah baris siswa yang dicentang
   const selectedCount = $derived(selectedIds.length);
 
+  // Fungsi untuk mengosongkan semua tanda centang di tabel
   const clearSelection = () => (rowSelection = {});
 
   let columns: ColumnDef<any>[] = $derived([
@@ -149,17 +201,17 @@
     },
     {
       accessorKey: "name",
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Name" }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Nama" }),
       cell: ({ row }) => renderSnippet(nameCell, { name: row.original.name }),
     },
     {
       accessorKey: "class",
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Class" }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Kelas" }),
       cell: ({ row }) => row.original.class || "-",
     },
     {
       accessorKey: "gender",
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Gender" }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Jenis Kelamin" }),
       cell: ({ row }) => row.original.gender || "-",
     },
     {
@@ -169,7 +221,7 @@
     },
     {
       accessorKey: "createdAt",
-      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Joined" }),
+      header: ({ column }) => renderSnippet(sortHeader, { column, label: "Bergabung" }),
       cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
@@ -251,11 +303,11 @@
   open={showDeleteConfirm}
   onClose={() => (showDeleteConfirm = false)}
   title={itemToDelete
-    ? "Delete Student?"
-    : `Delete ${selectedCount} Students?`}
+    ? "Hapus Siswa?"
+    : `Hapus ${selectedCount} Siswa?`}
   description={itemToDelete
-    ? `Are you sure you want to delete ${itemToDelete.name}? This action cannot be undone.`
-    : `Are you sure you want to delete ${selectedCount} selected students? All related data will be permanently removed.`}
+    ? `Apakah Anda yakin ingin menghapus ${itemToDelete.name}? Tindakan ini tidak dapat dibatalkan.`
+    : `Apakah Anda yakin ingin menghapus ${selectedCount} siswa yang dipilih? Semua data terkait akan dihapus secara permanen.`}
   icon={Delete01Icon}
 >
   <form
@@ -276,13 +328,13 @@
     <Button
       variant="ghost"
       class="flex-1 h-10 text-xs font-bold"
-      onclick={() => (showDeleteConfirm = false)}>Cancel</Button
+      onclick={() => (showDeleteConfirm = false)}>Batal</Button
     >
     <Button
       type="submit"
       variant="destructive"
       class="flex-1 h-10 text-xs font-bold shadow-lg shadow-destructive/20"
-      >Yes, Delete</Button
+      >Ya, Hapus</Button
     >
   </form>
 </ModalConfirmation>
@@ -290,8 +342,8 @@
 <ModalConfirmation
   open={showStatusConfirm}
   onClose={() => (showStatusConfirm = false)}
-  title={`Set ${statusToSet ? 'Active' : 'Inactive'}?`}
-  description={`Are you sure you want to mark ${selectedCount} selected students as ${statusToSet ? 'Active' : 'Inactive'}?`}
+  title={`${statusToSet ? 'Aktifkan' : 'Nonaktifkan'}?`}
+  description={`Apakah Anda yakin ingin menandai ${selectedCount} siswa yang dipilih sebagai ${statusToSet ? 'Aktif' : 'Tidak Aktif'}?`}
   icon={Tick02Icon}
 >
   <form
@@ -307,13 +359,13 @@
     <Button
       variant="ghost"
       class="flex-1 h-10 text-xs font-bold"
-      onclick={() => (showStatusConfirm = false)}>Cancel</Button
+      onclick={() => (showStatusConfirm = false)}>Batal</Button
     >
     <Button
       type="submit"
       class="flex-1 h-10 text-xs font-bold shadow-lg text-white {statusToSet ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20' : 'bg-stone-600 hover:bg-stone-700 shadow-stone-500/20'}"
       onclick={() => (($statusForm as any).isActive = statusToSet)}
-      >Yes, Proceed</Button
+      >Ya, Lanjutkan</Button
     >
   </form>
 </ModalConfirmation>
@@ -321,9 +373,9 @@
 <Modal
   open={showAdd}
   onClose={() => (showAdd = false)}
-  title="Add New Student"
+  title="Tambah Siswa Baru"
   icon={UserAdd01Icon}
-  description="Register a new student."
+  description="Daftarkan siswa baru."
   maxWidth="500px"
 >
   <form
@@ -355,7 +407,7 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Full Name <span class="text-destructive">*</span></Field.Label
+        >Nama Lengkap <span class="text-destructive">*</span></Field.Label
       >
       <Field.Content
         ><Input
@@ -375,7 +427,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Class</Field.Label
+          >Kelas</Field.Label
         >
         <Field.Content
           ><Input
@@ -390,7 +442,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Gender</Field.Label
+          >Jenis Kelamin</Field.Label
         >
         <Field.Content
           ><NativeSelect.Root
@@ -398,9 +450,9 @@
             bind:value={$addForm.gender}
             {...$addConstraints.gender}
           >
-            <NativeSelect.Option value="">Select Gender</NativeSelect.Option>
-            <NativeSelect.Option value="Male">Male</NativeSelect.Option>
-            <NativeSelect.Option value="Female">Female</NativeSelect.Option>
+            <NativeSelect.Option value="">Pilih Jenis Kelamin</NativeSelect.Option>
+            <NativeSelect.Option value="Male">Laki-laki</NativeSelect.Option>
+            <NativeSelect.Option value="Female">Perempuan</NativeSelect.Option>
           </NativeSelect.Root></Field.Content
         >
       </Field.Field>
@@ -411,7 +463,7 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Address</Field.Label
+        >Alamat</Field.Label
       >
       <Field.Content
         ><Textarea
@@ -427,13 +479,13 @@
     <Button
       variant="ghost"
       class="h-10 px-4 text-xs font-bold"
-      onclick={() => (showAdd = false)}>Discard</Button
+      onclick={() => (showAdd = false)}>Batal</Button
     >
     <Button
       type="submit"
       form="add-student-form"
       class="h-10 px-4 text-xs font-bold shadow-lg shadow-primary/20"
-      >Create Student</Button
+      >Buat Siswa</Button
     >
   {/snippet}
 </Modal>
@@ -441,7 +493,7 @@
 <Modal
   open={showEdit}
   onClose={() => (showEdit = false)}
-  title="Edit Student"
+  title="Edit Siswa"
   icon={PencilEdit01Icon}
   maxWidth="500px"
 >
@@ -476,7 +528,7 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Full Name <span class="text-destructive">*</span></Field.Label
+        >Nama Lengkap <span class="text-destructive">*</span></Field.Label
       >
       <Field.Content
         ><Input
@@ -496,7 +548,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Class</Field.Label
+          >Kelas</Field.Label
         >
         <Field.Content
           ><Input
@@ -511,7 +563,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Gender</Field.Label
+          >Jenis Kelamin</Field.Label
         >
         <Field.Content
           ><NativeSelect.Root
@@ -519,9 +571,9 @@
             bind:value={$editForm.gender}
             {...editConstraints.gender}
           >
-            <NativeSelect.Option value="">Select Gender</NativeSelect.Option>
-            <NativeSelect.Option value="Male">Male</NativeSelect.Option>
-            <NativeSelect.Option value="Female">Female</NativeSelect.Option>
+            <NativeSelect.Option value="">Pilih Jenis Kelamin</NativeSelect.Option>
+            <NativeSelect.Option value="Male">Laki-laki</NativeSelect.Option>
+            <NativeSelect.Option value="Female">Perempuan</NativeSelect.Option>
           </NativeSelect.Root></Field.Content
         >
       </Field.Field>
@@ -530,14 +582,14 @@
     <div class="flex items-center pt-2 pb-1">
       <label class="flex items-center gap-2 cursor-pointer text-sm font-medium">
         <Checkbox name="isActive" bind:checked={$editForm.isActive} />
-        Active Status
+        Status Aktif
       </label>
     </div>
 
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Address</Field.Label
+        >Alamat</Field.Label
       >
       <Field.Content
         ><Textarea
@@ -553,12 +605,12 @@
     <Button
       variant="ghost"
       class="h-10 px-4 text-xs font-bold"
-      onclick={() => (showEdit = false)}>Cancel</Button
+      onclick={() => (showEdit = false)}>Batal</Button
     >
     <Button
       type="submit"
       form="edit-student-form"
-      class="h-10 px-4 text-xs font-bold shadow-sm">Save Changes</Button
+      class="h-10 px-4 text-xs font-bold shadow-sm">Simpan Perubahan</Button
     >
   {/snippet}
 </Modal>
@@ -569,9 +621,9 @@
   <!-- HEADER -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Student Directory</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">Data Siswa</h1>
       <p class="text-muted-foreground mt-1 text-sm">
-        Manage students and their profiles.
+        Kelola data siswa dan profil mereka.
       </p>
     </div>
     <Button
@@ -582,7 +634,7 @@
         showAdd = true;
       }}
     >
-      <HugeiconsIcon icon={UserAdd01Icon} size={16} /> Add Student
+      <HugeiconsIcon icon={UserAdd01Icon} size={16} /> Tambah Siswa
     </Button>
   </div>
 
@@ -593,7 +645,7 @@
         <HugeiconsIcon icon={Search01Icon} size={14} />
       </span>
       <Input
-        placeholder="Filter names..."
+        placeholder="Cari nama..."
         value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
         oninput={(e) => table.getColumn("name")?.setFilterValue(e.currentTarget.value)}
         class="h-8 pl-8 text-xs bg-card"
@@ -605,12 +657,12 @@
         {#snippet child({ props })}
           <Button {...props} variant="outline" size="sm" class="gap-1.5 h-8 text-xs font-semibold">
             <HugeiconsIcon icon={Table01Icon} size={13} />
-            View
+            Tampilan
           </Button>
         {/snippet}
       </DropdownMenu.Trigger>
       <DropdownMenu.Content align="end" class="min-w-40 rounded-lg border p-1 shadow-md">
-        <p class="text-muted-foreground px-2 py-1 text-[11px] font-medium uppercase tracking-wide">Toggle columns</p>
+        <p class="text-muted-foreground px-2 py-1 text-[11px] font-medium uppercase tracking-wide">Tampilkan Kolom</p>
         {#each table.getAllColumns().filter((col) => col.getCanHide()) as column (column.id)}
           <DropdownMenu.CheckboxItem
             class="capitalize text-xs rounded-md px-2 py-1.5 focus:bg-accent focus:text-accent-foreground"
@@ -673,7 +725,7 @@
         {:else}
           <Table.Row>
             <Table.Cell colspan={columns.length} class="h-20 text-center text-xs">
-              No results.
+              Tidak ada data.
             </Table.Cell>
           </Table.Row>
         {/each}
@@ -684,11 +736,11 @@
   <!-- PAGINATION -->
   <div class="flex items-center justify-between text-xs text-muted-foreground">
     <span>
-      {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel().rows.length} row(s) selected
+      {table.getFilteredSelectedRowModel().rows.length} dari {table.getFilteredRowModel().rows.length} baris dipilih
     </span>
     <div class="flex items-center gap-4">
       <div class="flex items-center gap-2">
-        <span>Rows per page</span>
+        <span>Baris per halaman</span>
         <select
           class="rounded-md border px-2 py-1 bg-transparent font-medium text-xs focus:outline-none"
           value={table.getState().pagination.pageSize}
@@ -710,7 +762,7 @@
           ‹
         </Button>
         <span class="px-3 py-1 bg-muted/50 rounded-md font-bold text-foreground text-xs">
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() || 1}
+          Halaman {table.getState().pagination.pageIndex + 1} dari {table.getPageCount() || 1}
         </span>
         <Button
           variant="outline"
@@ -731,7 +783,7 @@
   <div
     class="flex items-center gap-1 rounded-md border bg-background px-1 py-0.5"
   >
-    <span class="px-2 text-[11px] font-bold">{selectedCount} selected</span>
+    <span class="px-2 text-[11px] font-bold">{selectedCount} dipilih</span>
     <div class="h-4 w-[1px] bg-border"></div>
     <ActionBarItem
       variant="ghost"
@@ -754,7 +806,7 @@
         showStatusConfirm = true;
       }}
     >
-      <HugeiconsIcon icon={Tick02Icon} size={14} /> Set Active
+      <HugeiconsIcon icon={Tick02Icon} size={14} /> Aktifkan
     </ActionBarItem>
     <ActionBarItem
       variant="secondary"
@@ -765,7 +817,7 @@
         showStatusConfirm = true;
       }}
     >
-      <HugeiconsIcon icon={Cancel01Icon} size={14} /> Set Inactive
+      <HugeiconsIcon icon={Cancel01Icon} size={14} /> Nonaktifkan
     </ActionBarItem>
     <ActionBarItem
       variant="destructive"
@@ -773,7 +825,7 @@
       class="h-8 gap-1.5 bg-red-50 px-3 text-[11px] font-bold text-red-600 hover:bg-red-100 border-none ml-1.5"
       onSelect={() => openDeleteConfirm()}
     >
-      <HugeiconsIcon icon={Delete02Icon} size={14} /> Delete Selected
+      <HugeiconsIcon icon={Delete02Icon} size={14} /> Hapus Terpilih
     </ActionBarItem>
   </ActionBarGroup>
 </ActionBar>
@@ -821,7 +873,7 @@
 {#snippet statusCell({ isActive }: { isActive: boolean })}
   <span class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold {isActive ? 'bg-emerald-50 text-emerald-700' : 'bg-stone-100 text-stone-600'}">
     <span class="size-1.5 rounded-full {isActive ? 'bg-emerald-500' : 'bg-stone-400'}"></span>
-    {isActive ? 'Active' : 'Inactive'}
+    {isActive ? 'Aktif' : 'Tidak Aktif'}
   </span>
 {/snippet}
 
@@ -842,14 +894,14 @@
         class="gap-2 text-xs"
         onclick={() => openEdit(row.original)}
       >
-        <HugeiconsIcon icon={PencilEdit01Icon} size={13} /> Edit Student
+        <HugeiconsIcon icon={PencilEdit01Icon} size={13} /> Edit Siswa
       </DropdownMenu.Item>
       <DropdownMenu.Separator />
       <DropdownMenu.Item
         class="text-destructive gap-2 text-xs"
         onclick={() => openDeleteConfirm(row.original)}
       >
-        <HugeiconsIcon icon={Delete01Icon} size={13} /> Delete Student
+        <HugeiconsIcon icon={Delete01Icon} size={13} /> Hapus Siswa
       </DropdownMenu.Item>
     </DropdownMenu.Content>
   </DropdownMenu.Root>

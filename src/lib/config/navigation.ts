@@ -32,35 +32,35 @@ export const navGroups: NavGroup[] = [
   {
     label: 'Workspace',
     items: [
-      { title: 'Dashboard', url: '/dashboard', icon: DashboardBrowsingIcon },
+      { title: 'Dasbor', url: '/dashboard', icon: DashboardBrowsingIcon },
     ]
   },
   {
-    label: 'Master Data',
+    label: 'Data Master',
     items: [
-      { title: 'Students', url: '/master-data/students', icon: UserGroupIcon },
-      { title: 'Saving Plans', url: '/master-data/saving-plans', icon: PiggyBankIcon },
+      { title: 'Siswa', url: '/master-data/students', icon: UserGroupIcon },
+      { title: 'Program Tabungan', url: '/master-data/saving-plans', icon: PiggyBankIcon },
     ]
   },
   {
-    label: 'Transactions',
+    label: 'Transaksi',
     items: [
-      { title: 'Deposits', url: '/transactions/deposits', icon: ArrowDown01Icon },
-      { title: 'Withdrawals', url: '/transactions/withdrawals', icon: ArrowUp01Icon },
-      { title: 'Transaction History', url: '/transactions/transaction-history', icon: FileStackIcon },
-      { title: 'Reversal', url: '/transactions/reversal', icon: RotateLeft01Icon },
+      { title: 'Setoran', url: '/transactions/deposits', icon: ArrowDown01Icon },
+      { title: 'Penarikan', url: '/transactions/withdrawals', icon: ArrowUp01Icon },
+      { title: 'Riwayat Transaksi', url: '/transactions/transaction-history', icon: FileStackIcon },
+      { title: 'Pembatalan', url: '/transactions/reversal', icon: RotateLeft01Icon },
     ]
   },
   {
-    label: 'Reports',
+    label: 'Laporan',
     items: [
-      { title: 'Saving Plans Report', url: '/reports/saving-plans-report', icon: BarChartIcon },
+      { title: 'Laporan Program Tabungan', url: '/reports/saving-plans-report', icon: BarChartIcon },
     ]
   },
   {
-    label: 'System',
+    label: 'Sistem',
     items: [
-      { title: 'User Management', url: '/system/user-management', icon: UserShield01Icon },
+      { title: 'Manajemen Pengguna', url: '/system/user-management', icon: UserShield01Icon },
     ]
   },
 ];

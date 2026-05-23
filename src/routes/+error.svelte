@@ -1,12 +1,18 @@
 <script lang="ts">
+  // Mengimpor store 'page' bawaan SvelteKit untuk mengakses data halaman aktif, status HTTP, dll.
   import { page } from '$app/stores';
+  // Mengimpor berkas CSS global untuk memastikan visualisasi tetap rapi saat terjadi error
   import './layout.css';
+  // Mengimpor komponen Button kustom untuk navigasi kembali
   import { Button } from '$lib/components/ui/button';
 
+  // Fungsi pembantu untuk mengarahkan pengguna ke halaman sebelumnya di riwayat browser
   const goBack = () => {
+    // Memastikan kode dijalankan di browser (client-side) sebelum mengakses objek window
     if (typeof window !== 'undefined') window.history.back();
   };
 
+  // Fungsi untuk mengembalikan judul dan penjelasan error berdasarkan kode status HTTP
   const getInfo = (status: number) => {
     switch (status) {
       case 404: return { title: 'Page not found',    desc: 'The page you\'re looking for doesn\'t exist or has been moved.' };
@@ -16,7 +22,9 @@
     }
   };
 
+  // Menentukan informasi error secara reaktif menggunakan $derived (jika status halaman berubah)
   let info = $derived(getInfo($page.status ?? 404));
+  // Menyimpan kode status HTTP secara reaktif
   let code = $derived($page.status ?? 404);
 </script>
 

@@ -79,11 +79,11 @@
         showAdd = false;
         addReset();
         addDateRange = { start: undefined, end: undefined };
-        toast.success("Saving plan created");
+        toast.success("Program tabungan berhasil dibuat");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Failed to create plan"),
+      toast.error(result.error.message || "Gagal membuat program"),
   });
 
   // Edit Plan
@@ -96,11 +96,11 @@
   } = superForm<any>(() => data.editForm, {
     onUpdated: ({ form }) => {
       if (form.valid) {
-        (showEdit = false), toast.success("Saving plan updated");
+        (showEdit = false), toast.success("Program tabungan berhasil diperbarui");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Update failed"),
+      toast.error(result.error.message || "Gagal memperbarui program"),
   });
 
   // Deletion
@@ -111,11 +111,11 @@
       if (form.valid) {
         (showDeleteConfirm = false),
           clearSelection(),
-          toast.success(form.message || "Action completed");
+          toast.success(form.message || "Tindakan berhasil");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Deletion failed"),
+      toast.error(result.error.message || "Gagal menghapus"),
   });
 
   // Bulk Status
@@ -128,11 +128,11 @@
         if (form.valid) {
           showStatusConfirm = false;
           clearSelection();
-          toast.success(form.message || "Status updated");
+          toast.success(form.message || "Status berhasil diperbarui");
         } else if (form.message) toast.error(form.message);
       },
       onError: ({ result }) =>
-        toast.error(result.error.message || "Failed to update status"),
+        toast.error(result.error.message || "Gagal memperbarui status"),
     },
   );
 
@@ -151,11 +151,11 @@
         if (form.valid) {
           selectedAddIds = new Set();
           studentSearch = "";
-          toast.success(form.message || "Enrolled successfully");
+          toast.success(form.message || "Siswa berhasil didaftarkan");
         } else if (form.message) toast.error(form.message);
       },
       onError: ({ result }) =>
-        toast.error(result.error.message || "Enrollment failed"),
+        toast.error(result.error.message || "Gagal mendaftarkan siswa"),
     },
   );
 
@@ -166,11 +166,11 @@
         if (form.valid) {
           selectedRemoveIds = new Set();
           studentSearch = "";
-          toast.success(form.message || "Removed successfully");
+          toast.success(form.message || "Siswa berhasil dihapus dari program");
         } else if (form.message) toast.error(form.message);
       },
       onError: ({ result }) =>
-        toast.error(result.error.message || "Remove failed"),
+        toast.error(result.error.message || "Gagal menghapus siswa"),
     },
   );
 
@@ -301,25 +301,25 @@
     {
       accessorKey: "code",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Code" }),
+        renderSnippet(sortHeader, { column, label: "Kode" }),
     },
     {
       accessorKey: "name",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Name" }),
+        renderSnippet(sortHeader, { column, label: "Nama" }),
       cell: ({ row }) => renderSnippet(nameCell, { name: row.original.name }),
     },
     {
       accessorKey: "studentCount",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Students" }),
+        renderSnippet(sortHeader, { column, label: "Siswa" }),
       cell: ({ row }) =>
         renderSnippet(studentCountCell, { count: row.original.studentCount ?? 0 }),
     },
     {
       accessorKey: "savingType",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Type" }),
+        renderSnippet(sortHeader, { column, label: "Jenis" }),
       cell: ({ row }) => row.original.savingType || "-",
     },
     {
@@ -332,7 +332,7 @@
     {
       accessorKey: "createdAt",
       header: ({ column }) =>
-        renderSnippet(sortHeader, { column, label: "Created" }),
+        renderSnippet(sortHeader, { column, label: "Dibuat" }),
       cell: ({ row }) => formatDate(row.original.createdAt),
     },
     {
@@ -433,10 +433,10 @@
 <ModalConfirmation
   open={showDeleteConfirm}
   onClose={() => (showDeleteConfirm = false)}
-  title={itemToDelete ? "Delete Plan?" : `Delete ${selectedCount} Plans?`}
+  title={itemToDelete ? "Hapus Program?" : `Hapus ${selectedCount} Program?`}
   description={itemToDelete
-    ? `Are you sure you want to delete ${itemToDelete.name}? This action cannot be undone.`
-    : `Are you sure you want to delete ${selectedCount} selected plans? All related data will be permanently removed.`}
+    ? `Apakah Anda yakin ingin menghapus ${itemToDelete.name}? Tindakan ini tidak dapat dibatalkan.`
+    : `Apakah Anda yakin ingin menghapus ${selectedCount} program yang dipilih? Semua data terkait akan dihapus secara permanen.`}
   icon={Delete01Icon}
 >
   <form
@@ -457,13 +457,13 @@
     <Button
       variant="ghost"
       class="flex-1 h-10 text-xs font-bold"
-      onclick={() => (showDeleteConfirm = false)}>Cancel</Button
+      onclick={() => (showDeleteConfirm = false)}>Batal</Button
     >
     <Button
       type="submit"
       variant="destructive"
       class="flex-1 h-10 text-xs font-bold shadow-lg shadow-destructive/20"
-      >Yes, Delete</Button
+      >Ya, Hapus</Button
     >
   </form>
 </ModalConfirmation>
@@ -471,8 +471,8 @@
 <ModalConfirmation
   open={showStatusConfirm}
   onClose={() => (showStatusConfirm = false)}
-  title={`Set ${statusToSet ? "Active" : "Inactive"}?`}
-  description={`Are you sure you want to mark ${selectedCount} selected plans as ${statusToSet ? "Active" : "Inactive"}?`}
+  title={`${statusToSet ? "Aktifkan?" : "Nonaktifkan?"}`}
+  description={`Apakah Anda yakin ingin menandai ${selectedCount} program yang dipilih sebagai ${statusToSet ? "Aktif" : "Tidak Aktif"}?`}
   icon={Tick02Icon}
 >
   <form
@@ -488,14 +488,14 @@
     <Button
       variant="ghost"
       class="flex-1 h-10 text-xs font-bold"
-      onclick={() => (showStatusConfirm = false)}>Cancel</Button
+      onclick={() => (showStatusConfirm = false)}>Batal</Button
     >
     <Button
       type="submit"
       class="flex-1 h-10 text-xs font-bold shadow-lg text-white {statusToSet
         ? 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-500/20'
         : 'bg-stone-600 hover:bg-stone-700 shadow-stone-500/20'}"
-      onclick={() => ($statusForm.isActive = statusToSet)}>Yes, Proceed</Button
+      onclick={() => ($statusForm.isActive = statusToSet)}>Ya, Lanjutkan</Button
     >
   </form>
 </ModalConfirmation>
@@ -503,9 +503,9 @@
 <Modal
   open={showAdd}
   onClose={() => (showAdd = false)}
-  title="Add New Saving Plan"
+  title="Tambah Program Tabungan Baru"
   icon={UserAdd01Icon}
-  description="Create a new savings program."
+  description="Buat program tabungan baru."
   maxWidth="560px"
 >
   <form
@@ -520,7 +520,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Code</Field.Label
+          >Kode</Field.Label
         >
         <Field.Content>
           <Input
@@ -538,7 +538,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Program Name</Field.Label
+          >Nama Program</Field.Label
         >
         <Field.Content>
           <Input
@@ -559,11 +559,11 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Saving Type</Field.Label
+        >Jenis Tabungan</Field.Label
       >
       <input type="hidden" name="savingType" value={$addForm.savingType} />
       <div class="grid grid-cols-2 gap-2">
-        {#each [{ val: "FLEXIBLE", label: "Flexible", desc: "No fixed target or schedule", icon: "⟲" }, { val: "GOAL", label: "Goal-based", desc: "Fixed target, dates & contribution", icon: "◎" }] as opt}
+        {#each [{ val: "FLEXIBLE", label: "Fleksibel", desc: "Tanpa target atau jadwal tetap", icon: "⟲" }, { val: "GOAL", label: "Berbasis Target", desc: "Target tetap, tanggal & kontribusi", icon: "◎" }] as opt}
           <button
             type="button"
             onclick={() => ($addForm.savingType = opt.val)}
@@ -597,7 +597,7 @@
         transition:slide={{ duration: 200 }}
       >
         <p class="text-[10px] font-bold uppercase tracking-widest text-primary">
-          Goal Configuration
+          Konfigurasi Target
         </p>
 
         <!-- Target Amount -->
@@ -608,7 +608,7 @@
               >Total Target</Field.Label
             >
             <span class="text-[10px] text-muted-foreground"
-              >Total funds to collect by end date</span
+              >Total dana yang dikumpulkan hingga tanggal akhir</span
             >
           </div>
           <Field.Content>
@@ -632,7 +632,7 @@
         <Field.Field class="space-y-1.5">
           <Field.Label
             class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-            >Date Range</Field.Label
+            >Rentang Tanggal</Field.Label
           >
           <Field.Content>
             <input type="hidden" name="startDate" value={$addForm.startDate} />
@@ -647,7 +647,7 @@
                   >
                     <HugeiconsIcon icon={Calendar03Icon} size={14} class="shrink-0 text-muted-foreground" />
                     <span class="flex-1 text-xs font-medium">
-                      {rangLabel(addDateRange) ?? "Select date range…"}
+                      {rangLabel(addDateRange) ?? "Pilih rentang tanggal…"}
                     </span>
                     {#if addDateRange.start || addDateRange.end}
                       <span
@@ -686,14 +686,14 @@
                         addCalendarOpen = false;
                       }}
                     >
-                      Clear
+                      Hapus
                     </Button>
                     <Button
                       size="sm"
                       class="text-xs h-8"
                       onclick={() => { addCalendarOpen = false; }}
                     >
-                      Apply
+                      Terapkan
                     </Button>
                   </div>
                 </Popover.Content>
@@ -709,7 +709,7 @@
           <p
             class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
           >
-            Deposit Requirement
+            Persyaratan Setoran
           </p>
           <div class="flex gap-2">
             <!-- Amount -->
@@ -733,7 +733,7 @@
               value={$addForm.defaultContributionType}
             />
             <div class="flex shrink-0">
-              {#each [{ val: "DAILY", label: "Day" }, { val: "WEEKLY", label: "Week" }, { val: "MONTHLY", label: "Month" }, { val: "YEARLY", label: "Year" }, { val: "CUSTOM", label: "Custom" }] as p, i}
+              {#each [{ val: "DAILY", label: "Hari" }, { val: "WEEKLY", label: "Minggu" }, { val: "MONTHLY", label: "Bulan" }, { val: "YEARLY", label: "Tahun" }, { val: "CUSTOM", label: "Kustom" }] as p, i}
                 <button
                   type="button"
                   onclick={() => ($addForm.defaultContributionType = p.val)}
@@ -755,11 +755,11 @@
               class="flex items-center gap-2"
               transition:slide={{ duration: 150 }}
             >
-              <span class="text-xs text-muted-foreground shrink-0">Every</span>
+              <span class="text-xs text-muted-foreground shrink-0">Setiap</span>
               <Input
                 name="customPeriodLabel"
                 bind:value={$addForm.customPeriodLabel}
-                placeholder="e.g. 2 weeks, 10 days…"
+                placeholder="mis. 2 minggu, 10 hari…"
                 class="h-8 flex-1 text-xs bg-muted/30"
               />
             </div>
@@ -767,30 +767,30 @@
           <!-- Live preview -->
           {#if $addForm.defaultContributionValue && $addForm.defaultContributionType}
             <p class="text-[11px] text-primary font-medium">
-              ✓ Each student must deposit
+              ✓ Setiap siswa harus menyetor
               <span class="font-bold"
                 >Rp {new Intl.NumberFormat("id-ID").format(
                   Number($addForm.defaultContributionValue),
                 )}</span
               >
               {#if $addForm.defaultContributionType === "CUSTOM"}
-                every <span class="font-bold"
+                setiap <span class="font-bold"
                   >{$addForm.customPeriodLabel || "…"}</span
                 >
               {:else}
                 per {(
                   {
-                    DAILY: "day",
-                    WEEKLY: "week",
-                    MONTHLY: "month",
-                    YEARLY: "year",
+                    DAILY: "hari",
+                    WEEKLY: "minggu",
+                    MONTHLY: "bulan",
+                    YEARLY: "tahun",
                   } as any
                 )[$addForm.defaultContributionType] ?? "…"}
               {/if}
             </p>
           {:else}
             <p class="text-[11px] text-muted-foreground">
-              Set an amount and period to see the requirement
+              Atur jumlah dan periode untuk melihat persyaratan
             </p>
           {/if}
         </div>
@@ -801,13 +801,13 @@
     <Button
       variant="ghost"
       class="h-10 px-4 text-xs font-bold"
-      onclick={() => (showAdd = false)}>Discard</Button
+      onclick={() => (showAdd = false)}>Batal</Button
     >
     <Button
       type="submit"
       form="add-plan-form"
       class="h-10 px-4 text-xs font-bold shadow-lg shadow-primary/20"
-      >Create Plan</Button
+      >Buat Program</Button
     >
   {/snippet}
 </Modal>
@@ -815,7 +815,7 @@
 <Modal
   open={showEdit}
   onClose={() => (showEdit = false)}
-  title="Edit Saving Plan"
+  title="Edit Program Tabungan"
   icon={PencilEdit01Icon}
   maxWidth="560px"
 >
@@ -833,7 +833,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Code</Field.Label
+          >Kode</Field.Label
         >
         <Field.Content>
           <Input
@@ -851,7 +851,7 @@
       <Field.Field class="space-y-1.5">
         <Field.Label
           class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-          >Program Name</Field.Label
+          >Nama Program</Field.Label
         >
         <Field.Content>
           <Input
@@ -872,11 +872,11 @@
     <Field.Field class="space-y-1.5">
       <Field.Label
         class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-        >Saving Type</Field.Label
+        >Jenis Tabungan</Field.Label
       >
       <input type="hidden" name="savingType" value={$editForm.savingType} />
       <div class="grid grid-cols-2 gap-2">
-        {#each [{ val: "FLEXIBLE", label: "Flexible", desc: "No fixed target or schedule", icon: "⟲" }, { val: "GOAL", label: "Goal-based", desc: "Fixed target, dates & contribution", icon: "◎" }] as opt}
+        {#each [{ val: "FLEXIBLE", label: "Fleksibel", desc: "Tanpa target atau jadwal tetap", icon: "⟲" }, { val: "GOAL", label: "Berbasis Target", desc: "Target tetap, tanggal & kontribusi", icon: "◎" }] as opt}
           <button
             type="button"
             onclick={() => ($editForm.savingType = opt.val)}
@@ -910,7 +910,7 @@
         transition:slide={{ duration: 200 }}
       >
         <p class="text-[10px] font-bold uppercase tracking-widest text-primary">
-          Goal Configuration
+          Konfigurasi Target
         </p>
 
         <!-- Target Amount -->
@@ -921,7 +921,7 @@
               >Total Target</Field.Label
             >
             <span class="text-[10px] text-muted-foreground"
-              >Total funds to collect by end date</span
+              >Total dana yang dikumpulkan hingga tanggal akhir</span
             >
           </div>
           <Field.Content>
@@ -945,7 +945,7 @@
         <Field.Field class="space-y-1.5">
           <Field.Label
             class="text-xs font-bold uppercase tracking-wider text-muted-foreground"
-            >Date Range</Field.Label
+            >Rentang Tanggal</Field.Label
           >
           <Field.Content>
             <input type="hidden" name="startDate" value={$editForm.startDate} />
@@ -960,7 +960,7 @@
                   >
                     <HugeiconsIcon icon={Calendar03Icon} size={14} class="shrink-0 text-muted-foreground" />
                     <span class="flex-1 text-xs font-medium">
-                      {rangLabel(editDateRange) ?? "Select date range…"}
+                      {rangLabel(editDateRange) ?? "Pilih rentang tanggal…"}
                     </span>
                     {#if editDateRange.start || editDateRange.end}
                       <span
@@ -999,14 +999,14 @@
                         editCalendarOpen = false;
                       }}
                     >
-                      Clear
+                      Hapus
                     </Button>
                     <Button
                       size="sm"
                       class="text-xs h-8"
                       onclick={() => { editCalendarOpen = false; }}
                     >
-                      Apply
+                      Terapkan
                     </Button>
                   </div>
                 </Popover.Content>
@@ -1022,7 +1022,7 @@
           <p
             class="text-[10px] font-bold uppercase tracking-widest text-muted-foreground"
           >
-            Deposit Requirement
+            Persyaratan Setoran
           </p>
           <div class="flex gap-2">
             <div class="relative flex-1">
@@ -1044,7 +1044,7 @@
               value={$editForm.defaultContributionType}
             />
             <div class="flex shrink-0">
-              {#each [{ val: "DAILY", label: "Day" }, { val: "WEEKLY", label: "Week" }, { val: "MONTHLY", label: "Month" }, { val: "YEARLY", label: "Year" }, { val: "CUSTOM", label: "Custom" }] as p, i}
+              {#each [{ val: "DAILY", label: "Hari" }, { val: "WEEKLY", label: "Minggu" }, { val: "MONTHLY", label: "Bulan" }, { val: "YEARLY", label: "Tahun" }, { val: "CUSTOM", label: "Kustom" }] as p, i}
                 <button
                   type="button"
                   onclick={() => ($editForm.defaultContributionType = p.val)}
@@ -1066,41 +1066,41 @@
               class="flex items-center gap-2"
               transition:slide={{ duration: 150 }}
             >
-              <span class="text-xs text-muted-foreground shrink-0">Every</span>
+              <span class="text-xs text-muted-foreground shrink-0">Setiap</span>
               <Input
                 name="customPeriodLabel"
                 bind:value={$editForm.customPeriodLabel}
-                placeholder="e.g. 2 weeks, 10 days…"
+                placeholder="mis. 2 minggu, 10 hari…"
                 class="h-8 flex-1 text-xs bg-muted/30"
               />
             </div>
           {/if}
           {#if $editForm.defaultContributionValue && $editForm.defaultContributionType}
             <p class="text-[11px] text-primary font-medium">
-              ✓ Each student must deposit
+              ✓ Setiap siswa harus menyetor
               <span class="font-bold"
                 >Rp {new Intl.NumberFormat("id-ID").format(
                   Number($editForm.defaultContributionValue),
                 )}</span
               >
               {#if $editForm.defaultContributionType === "CUSTOM"}
-                every <span class="font-bold"
+                setiap <span class="font-bold"
                   >{$editForm.customPeriodLabel || "…"}</span
                 >
               {:else}
                 per {(
                   {
-                    DAILY: "day",
-                    WEEKLY: "week",
-                    MONTHLY: "month",
-                    YEARLY: "year",
+                    DAILY: "hari",
+                    WEEKLY: "minggu",
+                    MONTHLY: "bulan",
+                    YEARLY: "tahun",
                   } as any
                 )[$editForm.defaultContributionType] ?? "…"}
               {/if}
             </p>
           {:else}
             <p class="text-[11px] text-muted-foreground">
-              Set an amount and period to see the requirement
+              Atur jumlah dan periode untuk melihat persyaratan
             </p>
           {/if}
         </div>
@@ -1113,9 +1113,9 @@
     >
       <Checkbox name="isActive" bind:checked={$editForm.isActive} />
       <div>
-        <p class="text-xs font-semibold">Active Status</p>
+        <p class="text-xs font-semibold">Status Aktif</p>
         <p class="text-[10px] text-muted-foreground">
-          Inactive plans won't accept new deposits
+          Program tidak aktif tidak menerima setoran baru
         </p>
       </div>
     </label>
@@ -1124,12 +1124,12 @@
     <Button
       variant="ghost"
       class="h-10 px-4 text-xs font-bold"
-      onclick={() => (showEdit = false)}>Cancel</Button
+      onclick={() => (showEdit = false)}>Batal</Button
     >
     <Button
       type="submit"
       form="edit-plan-form"
-      class="h-10 px-4 text-xs font-bold shadow-sm">Save Changes</Button
+      class="h-10 px-4 text-xs font-bold shadow-sm">Simpan Perubahan</Button
     >
   {/snippet}
 </Modal>
@@ -1138,7 +1138,7 @@
 <Modal
   open={showManage}
   onClose={() => (showManage = false)}
-  title="Manage Students"
+  title="Kelola Siswa"
   icon={UserAdd02Icon}
   description={managePlan?.name ?? ""}
   maxWidth="520px"
@@ -1153,7 +1153,7 @@
         ? 'border-b-2 border-primary text-primary'
         : 'text-muted-foreground hover:text-foreground'}"
     >
-      Add Students
+      Tambah Siswa
     </button>
     <button
       type="button"
@@ -1163,7 +1163,7 @@
         ? 'border-b-2 border-primary text-primary'
         : 'text-muted-foreground hover:text-foreground'}"
     >
-      Enrolled
+      Terdaftar
       <span
         class="ml-1.5 rounded-full px-1.5 py-0.5 text-[9px]
           {manageTab === 'enrolled' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'}"
@@ -1181,7 +1181,7 @@
     <Input
       type="text"
       bind:value={studentSearch}
-      placeholder={manageTab === "add" ? "Search name, NIS, or class…" : "Search enrolled…"}
+      placeholder={manageTab === "add" ? "Cari nama, NIS, atau kelas…" : "Cari yang terdaftar…"}
       class="h-9 pl-8 text-xs bg-muted/50"
     />
   </div>
@@ -1204,11 +1204,11 @@
         disabled={filteredAddStudents.length === 0}
       />
       <span class="text-[11px] font-semibold text-muted-foreground">
-        Select all visible
+        Pilih semua yang terlihat
         <span class="text-foreground font-bold">({filteredAddStudents.length})</span>
       </span>
       {#if selectedAddIds.size > 0}
-        <span class="ml-auto text-[10px] font-bold text-primary">{selectedAddIds.size} selected</span>
+        <span class="ml-auto text-[10px] font-bold text-primary">{selectedAddIds.size} dipilih</span>
       {/if}
     </div>
 
@@ -1216,7 +1216,7 @@
       {#if filteredAddStudents.length === 0}
         <div class="flex flex-col items-center gap-1.5 py-10 text-muted-foreground">
           <HugeiconsIcon icon={StudentIcon} size={22} />
-          <p class="text-xs">{studentSearch ? "No results" : "All students already enrolled"}</p>
+          <p class="text-xs">{studentSearch ? "Tidak ada data." : "Semua siswa sudah terdaftar"}</p>
         </div>
       {:else}
         {#each filteredAddStudents as s (s.id)}
@@ -1266,14 +1266,14 @@
         disabled={filteredEnrolled.length === 0}
       />
       <span class="text-[11px] font-semibold text-muted-foreground">
-        Select all removable
+        Pilih semua yang bisa dihapus
         <span class="text-foreground font-bold">({removable.length})</span>
         {#if removable.length < filteredEnrolled.length}
-          <span class="text-amber-600">· {filteredEnrolled.length - removable.length} has balance</span>
+          <span class="text-amber-600">· {filteredEnrolled.length - removable.length} memiliki saldo</span>
         {/if}
       </span>
       {#if selectedRemoveIds.size > 0}
-        <span class="ml-auto text-[10px] font-bold text-destructive">{selectedRemoveIds.size} selected</span>
+        <span class="ml-auto text-[10px] font-bold text-destructive">{selectedRemoveIds.size} dipilih</span>
       {/if}
     </div>
 
@@ -1281,7 +1281,7 @@
       {#if filteredEnrolled.length === 0}
         <div class="flex flex-col items-center gap-1.5 py-10 text-muted-foreground">
           <HugeiconsIcon icon={StudentIcon} size={22} />
-          <p class="text-xs">{studentSearch ? "No results" : "No students enrolled yet"}</p>
+          <p class="text-xs">{studentSearch ? "Tidak ada data." : "Belum ada siswa yang terdaftar"}</p>
         </div>
       {:else}
         {#each filteredEnrolled as s (s.studentId)}
@@ -1316,7 +1316,7 @@
                 Rp {new Intl.NumberFormat('id-ID').format(Number(s.currentAmount))}
               </span>
             {:else if sel}
-              <span class="shrink-0 text-[9px] font-bold text-destructive/70">Will remove</span>
+              <span class="shrink-0 text-[9px] font-bold text-destructive/70">Akan dihapus</span>
             {/if}
           </button>
         {/each}
@@ -1327,22 +1327,22 @@
   {#snippet footer()}
     {#if manageTab === "add"}
       <span class="mr-auto text-[11px] text-muted-foreground">
-        {selectedAddIds.size > 0 ? `${selectedAddIds.size} selected` : ""}
+        {selectedAddIds.size > 0 ? `${selectedAddIds.size} dipilih` : ""}
       </span>
-      <Button variant="ghost" class="h-9 px-4 text-xs font-bold" onclick={() => (showManage = false)}>Cancel</Button>
+      <Button variant="ghost" class="h-9 px-4 text-xs font-bold" onclick={() => (showManage = false)}>Batal</Button>
       <Button
         type="submit"
         form="enroll-form"
         disabled={selectedAddIds.size === 0}
         class="h-9 px-4 text-xs font-bold shadow-lg shadow-primary/20 disabled:opacity-40"
       >
-        Enroll {selectedAddIds.size > 0 ? selectedAddIds.size : ""}
+        Daftarkan {selectedAddIds.size > 0 ? selectedAddIds.size : ""}
       </Button>
     {:else}
       <span class="mr-auto text-[11px] text-muted-foreground">
-        {selectedRemoveIds.size > 0 ? `${selectedRemoveIds.size} selected` : ""}
+        {selectedRemoveIds.size > 0 ? `${selectedRemoveIds.size} dipilih` : ""}
       </span>
-      <Button variant="ghost" class="h-9 px-4 text-xs font-bold" onclick={() => (showManage = false)}>Cancel</Button>
+      <Button variant="ghost" class="h-9 px-4 text-xs font-bold" onclick={() => (showManage = false)}>Batal</Button>
       <Button
         type="submit"
         form="remove-form"
@@ -1350,7 +1350,7 @@
         variant="destructive"
         class="h-9 px-4 text-xs font-bold disabled:opacity-40"
       >
-        Remove {selectedRemoveIds.size > 0 ? selectedRemoveIds.size : ""}
+        Hapus {selectedRemoveIds.size > 0 ? selectedRemoveIds.size : ""}
       </Button>
     {/if}
   {/snippet}
@@ -1362,9 +1362,9 @@
   <!-- HEADER -->
   <div class="flex items-center justify-between">
     <div>
-      <h1 class="text-2xl font-semibold tracking-tight">Saving Plans</h1>
+      <h1 class="text-2xl font-semibold tracking-tight">Program Tabungan</h1>
       <p class="text-muted-foreground mt-1 text-sm">
-        Manage student saving plans and rules.
+        Kelola program tabungan dan aturan simpanan siswa.
       </p>
     </div>
     <Button
@@ -1376,7 +1376,7 @@
         showAdd = true;
       }}
     >
-      <HugeiconsIcon icon={UserAdd01Icon} size={16} /> Add Plan
+      <HugeiconsIcon icon={UserAdd01Icon} size={16} /> Tambah Program
     </Button>
   </div>
 
@@ -1389,7 +1389,7 @@
         <HugeiconsIcon icon={Search01Icon} size={14} />
       </span>
       <Input
-        placeholder="Filter names..."
+        placeholder="Cari nama..."
         value={(table.getColumn("name")?.getFilterValue() as string) ?? ""}
         oninput={(e) =>
           table.getColumn("name")?.setFilterValue(e.currentTarget.value)}
@@ -1407,7 +1407,7 @@
             class="gap-1.5 h-8 text-xs font-semibold"
           >
             <HugeiconsIcon icon={Table01Icon} size={13} />
-            View
+            Tampilan
           </Button>
         {/snippet}
       </DropdownMenu.Trigger>
@@ -1418,7 +1418,7 @@
         <p
           class="text-muted-foreground px-2 py-1 text-[11px] font-medium uppercase tracking-wide"
         >
-          Toggle columns
+          Tampilkan Kolom
         </p>
         {#each table
           .getAllColumns()
@@ -1509,7 +1509,7 @@
               colspan={columns.length}
               class="h-20 text-center text-xs"
             >
-              No results.
+              Tidak ada data.
             </Table.Cell>
           </Table.Row>
         {/each}
@@ -1522,12 +1522,12 @@
     class="flex items-center justify-between text-xs text-muted-foreground"
   >
     <span>
-      {table.getFilteredSelectedRowModel().rows.length} of {table.getFilteredRowModel()
-        .rows.length} row(s) selected
+      {table.getFilteredSelectedRowModel().rows.length} dari {table.getFilteredRowModel()
+        .rows.length} baris dipilih
     </span>
     <div class="flex items-center gap-4">
       <div class="flex items-center gap-2">
-        <span>Rows per page</span>
+        <span>Baris per halaman</span>
         <select
           class="rounded-md border px-2 py-1 bg-transparent font-medium text-xs focus:outline-none"
           value={table.getState().pagination.pageSize}
@@ -1551,7 +1551,7 @@
         <span
           class="px-3 py-1 bg-muted/50 rounded-md font-bold text-foreground text-xs"
         >
-          Page {table.getState().pagination.pageIndex + 1} of {table.getPageCount() ||
+          Halaman {table.getState().pagination.pageIndex + 1} dari {table.getPageCount() ||
             1}
         </span>
         <Button
@@ -1573,7 +1573,7 @@
   <div
     class="flex items-center gap-1 rounded-md border bg-background px-1 py-0.5"
   >
-    <span class="px-2 text-[11px] font-bold">{selectedCount} selected</span>
+    <span class="px-2 text-[11px] font-bold">{selectedCount} dipilih</span>
     <div class="h-4 w-[1px] bg-border"></div>
     <ActionBarItem
       variant="ghost"
@@ -1596,7 +1596,7 @@
         showStatusConfirm = true;
       }}
     >
-      <HugeiconsIcon icon={Tick02Icon} size={14} /> Set Active
+      <HugeiconsIcon icon={Tick02Icon} size={14} /> Aktifkan
     </ActionBarItem>
     <ActionBarItem
       variant="secondary"
@@ -1607,7 +1607,7 @@
         showStatusConfirm = true;
       }}
     >
-      <HugeiconsIcon icon={Cancel01Icon} size={14} /> Set Inactive
+      <HugeiconsIcon icon={Cancel01Icon} size={14} /> Nonaktifkan
     </ActionBarItem>
     <ActionBarItem
       variant="destructive"
@@ -1615,7 +1615,7 @@
       class="h-8 gap-1.5 bg-red-50 px-3 text-[11px] font-bold text-red-600 hover:bg-red-100 border-none ml-1.5"
       onSelect={() => openDeleteConfirm()}
     >
-      <HugeiconsIcon icon={Delete02Icon} size={14} /> Delete Selected
+      <HugeiconsIcon icon={Delete02Icon} size={14} /> Hapus Terpilih
     </ActionBarItem>
   </ActionBarGroup>
 </ActionBar>
@@ -1685,7 +1685,7 @@
         ? 'bg-emerald-500'
         : 'bg-stone-400'}"
     ></span>
-    {isActive ? "Active" : "Inactive"}
+    {isActive ? "Aktif" : "Tidak Aktif"}
   </span>
 {/snippet}
 
@@ -1706,14 +1706,14 @@
         class="gap-2 text-xs"
         onclick={() => openManage(row.original)}
       >
-        <HugeiconsIcon icon={UserAdd02Icon} size={13} /> Manage Students
+        <HugeiconsIcon icon={UserAdd02Icon} size={13} /> Kelola Siswa
       </DropdownMenu.Item>
       <DropdownMenu.Separator />
       <DropdownMenu.Item
         class="gap-2 text-xs"
         onclick={() => openEdit(row.original)}
       >
-        <HugeiconsIcon icon={PencilEdit01Icon} size={13} /> Edit Plan
+        <HugeiconsIcon icon={PencilEdit01Icon} size={13} /> Edit Program
       </DropdownMenu.Item>
       <DropdownMenu.Separator />
       <DropdownMenu.Item
@@ -1721,9 +1721,9 @@
         disabled={Number(row.original.totalBalance) > 0}
         onclick={() => Number(row.original.totalBalance) === 0 && openDeleteConfirm(row.original)}
       >
-        <HugeiconsIcon icon={Delete01Icon} size={13} /> Delete Plan
+        <HugeiconsIcon icon={Delete01Icon} size={13} /> Hapus Program
         {#if Number(row.original.totalBalance) > 0}
-          <span class="ml-auto text-[10px] text-muted-foreground">has balance</span>
+          <span class="ml-auto text-[10px] text-muted-foreground">memiliki saldo</span>
         {/if}
       </DropdownMenu.Item>
     </DropdownMenu.Content>
