@@ -104,13 +104,13 @@
     });
 
   const rangeLabel = $derived(() => {
-    if (!dateRange.start || !dateRange.end) return "Select range";
+    if (!dateRange.start || !dateRange.end) return "Pilih rentang";
     return `${fmtMonthYear(dateRange.start)} – ${fmtMonthYear(dateRange.end)}`;
   });
 
   // Dynamic chart subtitle based on active range from server
   const chartRangeLabel = $derived(() => {
-    if (!r?.rangeFrom || !r?.rangeTo) return "last 12 months";
+    if (!r?.rangeFrom || !r?.rangeTo) return "12 bulan terakhir";
     const from = isoToCalendarDate(r.rangeFrom);
     const to = isoToCalendarDate(r.rangeTo);
     // Same year → "Jan – Dec 2025"
@@ -564,7 +564,7 @@
                 {:else}
                   <span>—</span>
                 {/if}
-                vs last month
+                vs bulan lalu
               </p>
             </Card.Content>
           </Card.Root>
@@ -755,7 +755,7 @@
             </div>
           </div>
           <p class="mt-6 text-center text-[9px] text-muted-foreground">
-            Dibuat oleh SantriPay · {plan.code} · {printDate}
+            Dibuat oleh ITASA · {plan.code} · {printDate}
           </p>
         </div>
       </Card.Content>

@@ -30,7 +30,7 @@ export interface NavGroup {
 
 export const navGroups: NavGroup[] = [
   {
-    label: 'Workspace',
+    label: 'Area Kerja',
     items: [
       { title: 'Dasbor', url: '/dashboard', icon: DashboardBrowsingIcon },
     ]

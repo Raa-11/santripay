@@ -35,7 +35,7 @@
 	type DistRow = Member & { share: number; capped: boolean; balanceAfter: number };
 
 	// ── Tab ───────────────────────────────────────────────
-	let activeTab = $state<'individual' | 'bulk'>('individual');
+	let activeTab = $state<'per-siswa' | 'massal'>('per-siswa');
 
 	// ── Individual state ──────────────────────────────────
 	let searchQuery = $state('');
@@ -254,9 +254,12 @@
 
 	<!-- Tabs -->
 	<div class="flex gap-0.5 rounded-lg border bg-muted/30 p-0.5 w-fit">
-		{#each [{ key: 'individual', label: 'Individual' }, { key: 'bulk', label: 'Per Program Tabungan' }] as tab}
+		{#each [
+			{ key: 'per-siswa', label: 'Per Siswa' },
+			{ key: 'massal', label: 'Per Program Tabungan' }
+		] as tab}
 			<button
-				onclick={() => (activeTab = tab.key as 'individual' | 'bulk')}
+				onclick={() => (activeTab = tab.key as 'per-siswa' | 'massal')}
 				class="rounded px-4 py-1.5 text-xs font-semibold transition-colors {activeTab === tab.key
 					? 'bg-background text-foreground shadow-sm'
 					: 'text-muted-foreground hover:text-foreground'}"
@@ -269,7 +272,7 @@
 	<!-- ══════════════════════════════════════════════════════ -->
 	<!-- TAB: PER SISWA -->
 	<!-- ══════════════════════════════════════════════════════ -->
-	{#if activeTab === 'individual'}
+	{#if activeTab === 'per-siswa'}
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5 items-stretch">
 
 		<!-- Form card -->
@@ -288,10 +291,10 @@
 				<span class="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium text-muted-foreground">draft</span>
 				{#if withdrawSuccess}
 					<span class="flex items-center gap-1 text-[10px] font-medium text-emerald-600">
-						<HugeiconsIcon icon={Tick02Icon} size={11} /> saved · {lastRefNo}
+						<HugeiconsIcon icon={Tick02Icon} size={11} /> tersimpan · {lastRefNo}
 					</span>
 				{:else}
-					<span class="text-[10px] text-muted-foreground">· unsaved</span>
+					<span class="text-[10px] text-muted-foreground">· belum disimpan</span>
 				{/if}
 			</div>
 
@@ -576,7 +579,7 @@
 	<!-- ══════════════════════════════════════════════════════ -->
 	<!-- TAB: PER SAVING PLAN -->
 	<!-- ══════════════════════════════════════════════════════ -->
-	{#if activeTab === 'bulk'}
+	{#if activeTab === 'massal'}
 	<div class="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-5 items-stretch">
 
 		<!-- Bulk form card -->

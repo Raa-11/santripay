@@ -790,7 +790,7 @@
       size="icon-sm"
       class="size-7"
       onSelect={clearSelection}
-      aria-label="Clear selection"
+      aria-label="Hapus pilihan"
     >
       <HugeiconsIcon icon={Cancel01Icon} size={14} />
     </ActionBarItem>
@@ -834,16 +834,16 @@
   <Checkbox
     checked={table.getIsAllPageRowsSelected()}
     indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
-    onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
-    aria-label="Select all"
+	onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
+    aria-label="Pilih semua"
   />
 {/snippet}
 
 {#snippet selectCell({ row }: { row: any })}
   <Checkbox
     checked={row.getIsSelected()}
-    onCheckedChange={(v) => row.toggleSelected(!!v)}
-    aria-label="Select row"
+	onCheckedChange={(v) => row.toggleSelected(!!v)}
+    aria-label="Pilih baris"
   />
 {/snippet}
 

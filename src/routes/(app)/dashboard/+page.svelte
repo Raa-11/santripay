@@ -477,7 +477,7 @@
                 series={[
                   {
                     key: "deposit",
-                    label: "Deposit",
+                    label: "Setoran",
                     color: "var(--primary)",
                     props: {
                       fill: "url(#dashboard-deposit-gradient)",
@@ -487,7 +487,7 @@
                   },
                   {
                     key: "withdraw",
-                    label: "Withdraw",
+                    label: "Penarikan",
                     color: "var(--destructive)",
                     props: {
                       fill: "url(#dashboard-withdraw-gradient)",

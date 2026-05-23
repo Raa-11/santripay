@@ -69,11 +69,11 @@
       if (form.valid) {
         showAdd = false;
         addReset();
-        toast.success("User created");
+        toast.success("Pengguna berhasil dibuat");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Failed to create user"),
+      toast.error(result.error.message || "Gagal membuat pengguna"),
   });
 
   // Edit User
@@ -87,11 +87,11 @@
     onUpdated: ({ form }: { form: any }) => {
       if (form.valid) {
         showEdit = false;
-        toast.success("Profile updated");
+        toast.success("Profil berhasil diperbarui");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Update failed"),
+      toast.error(result.error.message || "Gagal memperbarui"),
   });
 
   // Update Password
@@ -105,11 +105,11 @@
     onUpdated: ({ form }: { form: any }) => {
       if (form.valid) {
         showPassword = false;
-        toast.success("Password updated");
+        toast.success("Kata sandi berhasil diperbarui");
       } else if (form.message) toast.error(form.message);
     },
     onError: ({ result }) =>
-      toast.error(result.error.message || "Security update failed"),
+      toast.error(result.error.message || "Update keamanan gagal"),
   });
 
   // Deletion
@@ -729,7 +729,7 @@
       size="icon-sm"
       class="size-7"
       onSelect={clearSelection}
-      aria-label="Clear selection"
+      aria-label="Hapus pilihan"
     >
       <HugeiconsIcon icon={Cancel01Icon} size={14} />
     </ActionBarItem>
@@ -764,7 +764,7 @@
     checked={table.getIsAllPageRowsSelected()}
     indeterminate={table.getIsSomePageRowsSelected() && !table.getIsAllPageRowsSelected()}
     onCheckedChange={(v) => table.toggleAllPageRowsSelected(!!v)}
-    aria-label="Select all"
+    aria-label="Pilih semua"
   />
 {/snippet}
 
@@ -772,7 +772,7 @@
   <Checkbox
     checked={row.getIsSelected()}
     onCheckedChange={(v) => row.toggleSelected(!!v)}
-    aria-label="Select row"
+    aria-label="Pilih baris"
   />
 {/snippet}
 

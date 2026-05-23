@@ -451,14 +451,14 @@
                   calendarOpen = false;
                 }}
               >
-                Clear
-              </Button>
-              <Button
-                size="sm"
-                class="text-xs"
-                onclick={() => { calendarOpen = false; }}
-              >
-                Apply
+			Bersihkan
+				</Button>
+				<Button
+					size="sm"
+					class="text-xs"
+					onclick={() => { calendarOpen = false; }}
+				>
+					Terapkan
               </Button>
             </div>
           </Popover.Content>

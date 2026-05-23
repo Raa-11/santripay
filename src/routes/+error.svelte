@@ -1,4 +1,4 @@
-<script lang="ts">
+﻿<script lang="ts">
   // Mengimpor store 'page' bawaan SvelteKit untuk mengakses data halaman aktif, status HTTP, dll.
   import { page } from '$app/stores';
   // Mengimpor berkas CSS global untuk memastikan visualisasi tetap rapi saat terjadi error
@@ -29,7 +29,7 @@
 </script>
 
 <svelte:head>
-  <title>{info.title} — SantriPay</title>
+  <title>{info.title} — ITASA</title>
 </svelte:head>
 
 <div class="min-h-svh w-full flex flex-col items-center justify-center gap-6 px-4 text-center bg-background font-sans animate-in fade-in duration-500">
@@ -52,7 +52,7 @@
   </div>
 
   <!-- Brand -->
-  <p class="text-xs text-muted-foreground/50 tracking-widest uppercase mt-4">SantriPay</p>
+  <p class="text-xs text-muted-foreground/50 tracking-widest uppercase mt-4">ITASA</p>
 </div>
 
 <style>

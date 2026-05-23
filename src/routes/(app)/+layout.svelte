@@ -32,7 +32,7 @@
     - $derived.by() dipakai untuk membuat breadcrumb secara
       reaktif: setiap kali URL berubah ($page.url.pathname),
       breadcrumb ikut diperbarui otomatis.
-    - Grup navigasi berlabel "Workspace" tidak tampil sebagai
+    - Grup navigasi berlabel "Area Kerja" tidak tampil sebagai
       parent breadcrumb (dianggap level teratas).
 -->
 <script lang="ts">
@@ -71,8 +71,8 @@
   const routeMap = navGroups.reduce<Record<string, { parent?: string; label: string }>>((acc, group) => {
     group.items.forEach((item) => {
       acc[item.url] = {
-        // Jika grup navigasi adalah "Workspace", set parent jadi kosong (dianggap menu utama)
-        parent: group.label === "Workspace" ? undefined : group.label,
+        // Jika grup navigasi adalah "Area Kerja", set parent jadi kosong (dianggap menu utama)
+        parent: group.label === "Area Kerja" ? undefined : group.label,
         label: item.title,
       };
     });
